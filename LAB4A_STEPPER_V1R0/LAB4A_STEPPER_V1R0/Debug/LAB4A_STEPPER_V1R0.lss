@@ -613,8 +613,8 @@ void mTimer(int count){ // delay microsecond
  424:	81 e1       	ldi	r24, 0x11	; 17
  426:	90 e0       	ldi	r25, 0x00	; 0
  428:	7a de       	rcall	.-780    	; 0x11e <stepperControl>
- 42a:	80 ed       	ldi	r24, 0xD0	; 208
- 42c:	97 e0       	ldi	r25, 0x07	; 7
+ 42a:	8c ed       	ldi	r24, 0xDC	; 220
+ 42c:	95 e0       	ldi	r25, 0x05	; 5
  42e:	52 de       	rcall	.-860    	; 0xd4 <mTimer>
  430:	ae 01       	movw	r20, r28
  432:	4d 5f       	subi	r20, 0xFD	; 253
@@ -625,8 +625,8 @@ void mTimer(int count){ // delay microsecond
  43c:	81 e2       	ldi	r24, 0x21	; 33
  43e:	90 e0       	ldi	r25, 0x00	; 0
  440:	6e de       	rcall	.-804    	; 0x11e <stepperControl>
- 442:	80 ed       	ldi	r24, 0xD0	; 208
- 444:	97 e0       	ldi	r25, 0x07	; 7
+ 442:	8c ed       	ldi	r24, 0xDC	; 220
+ 444:	95 e0       	ldi	r25, 0x05	; 5
  446:	46 de       	rcall	.-884    	; 0xd4 <mTimer>
  448:	ae 01       	movw	r20, r28
  44a:	4d 5f       	subi	r20, 0xFD	; 253
@@ -637,8 +637,8 @@ void mTimer(int count){ // delay microsecond
  454:	84 e6       	ldi	r24, 0x64	; 100
  456:	90 e0       	ldi	r25, 0x00	; 0
  458:	62 de       	rcall	.-828    	; 0x11e <stepperControl>
- 45a:	80 ed       	ldi	r24, 0xD0	; 208
- 45c:	97 e0       	ldi	r25, 0x07	; 7
+ 45a:	8c ed       	ldi	r24, 0xDC	; 220
+ 45c:	95 e0       	ldi	r25, 0x05	; 5
  45e:	3a de       	rcall	.-908    	; 0xd4 <mTimer>
  460:	ae 01       	movw	r20, r28
  462:	4d 5f       	subi	r20, 0xFD	; 253
@@ -649,8 +649,8 @@ void mTimer(int count){ // delay microsecond
  46c:	8c e9       	ldi	r24, 0x9C	; 156
  46e:	9f ef       	ldi	r25, 0xFF	; 255
  470:	56 de       	rcall	.-852    	; 0x11e <stepperControl>
- 472:	80 ed       	ldi	r24, 0xD0	; 208
- 474:	97 e0       	ldi	r25, 0x07	; 7
+ 472:	8c ed       	ldi	r24, 0xDC	; 220
+ 474:	95 e0       	ldi	r25, 0x05	; 5
  476:	2e de       	rcall	.-932    	; 0xd4 <mTimer>
  478:	ae 01       	movw	r20, r28
  47a:	4d 5f       	subi	r20, 0xFD	; 253
@@ -661,8 +661,8 @@ void mTimer(int count){ // delay microsecond
  484:	8f ed       	ldi	r24, 0xDF	; 223
  486:	9f ef       	ldi	r25, 0xFF	; 255
  488:	4a de       	rcall	.-876    	; 0x11e <stepperControl>
- 48a:	80 ed       	ldi	r24, 0xD0	; 208
- 48c:	97 e0       	ldi	r25, 0x07	; 7
+ 48a:	8c ed       	ldi	r24, 0xDC	; 220
+ 48c:	95 e0       	ldi	r25, 0x05	; 5
  48e:	22 de       	rcall	.-956    	; 0xd4 <mTimer>
  490:	ae 01       	movw	r20, r28
  492:	4d 5f       	subi	r20, 0xFD	; 253
@@ -673,8 +673,8 @@ void mTimer(int count){ // delay microsecond
  49c:	8f ee       	ldi	r24, 0xEF	; 239
  49e:	9f ef       	ldi	r25, 0xFF	; 255
  4a0:	3e de       	rcall	.-900    	; 0x11e <stepperControl>
- 4a2:	80 ed       	ldi	r24, 0xD0	; 208
- 4a4:	97 e0       	ldi	r25, 0x07	; 7
+ 4a2:	8c ed       	ldi	r24, 0xDC	; 220
+ 4a4:	95 e0       	ldi	r25, 0x05	; 5
  4a6:	16 de       	rcall	.-980    	; 0xd4 <mTimer>
  4a8:	95 cf       	rjmp	.-214    	; 0x3d4 <main+0x62>
 

@@ -95,19 +95,18 @@ int main(int argc, char *argv[]){
 			}
 		}
 		/*stepper function testing*/
-		
 		stepperControl(17,&stepperPosition,&stepperIteration); //~30 degrees
-		mTimer(2000);
+		mTimer(1500);
 		stepperControl(33,&stepperPosition,&stepperIteration); //~60 degrees
-		mTimer(2000);
+		mTimer(1500);
 		stepperControl(100,&stepperPosition,&stepperIteration); //180 degrees
-		mTimer(2000);
+		mTimer(1500);
 		stepperControl(-100,&stepperPosition,&stepperIteration); //-180 degrees
-		mTimer(2000);
+		mTimer(1500);
 		stepperControl(-33,&stepperPosition,&stepperIteration); //~-60 degrees
-		mTimer(2000);
+		mTimer(1500);
 		stepperControl(-17,&stepperPosition,&stepperIteration); //~-30 degrees
-		mTimer(2000);
+		mTimer(1500);
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
@@ -141,7 +140,7 @@ void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise
 	else DIRECTION = 0;
 	
-	CURRENT_ITERATION = offset + DIRECTION;//save some math later
+	CURRENT_ITERATION = offset + DIRECTION;//saves some math later during "for" loop
 	
 	for(i=0;i<absSteps;i++){
 		//ramp up
