@@ -148,7 +148,7 @@ ISR(ADC_vect){
 ISR(INT6_vect){
 	int i;
 	SWITCH_DIRECTION=1;
-	for(i=0;i<1000;i++){}//arbitrary delay
+	for(i=0;i<1000;i++){}//arbitrary delay (allow button to settle)
 	//bad practice, but good for demonstration purposes
 	while((PINE & 0b01000000)==0b01000000){ //while switch is still pressed
 		for(i=0;i<1000;i++){}//arbitrary delay
