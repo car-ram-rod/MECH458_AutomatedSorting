@@ -58,7 +58,7 @@ int main(int argc, char *argv[]){
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM;
 	setupISR();
 	setupADC();
-	
+	initTimer1();
 	/*Port I/O Definitions*/
 	DDRA = 0xFF; /* Sets all pins on Port A to output: stepper motor control */
 	/*stepper motor connections to MCU: PA5:0 = EN0, L1, L2, EN1, L3, L4*/
