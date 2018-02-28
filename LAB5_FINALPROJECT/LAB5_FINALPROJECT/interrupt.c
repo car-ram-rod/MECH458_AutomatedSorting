@@ -12,9 +12,9 @@ void initTimer1 (void){ //initialize Timer 1 for CTC (Clear Timer on Compare)
 void mTimer(int count){ // delay microsecond
 	int i = 0; //initialize loop counter
 	/*Enable the output compare interrupt enable*/
-	//TIMSK1 = TIMSK1 | 0b00000010; // --ODA edit
-	/*initialize timer with prescalar of 1*/
-	TCCR1B |= _BV(CS10);
+	//TIMSK1 = TIMSK1 | 0b00000010; // --ODA edit: becomes
+	/*initialize timer 1 with prescalar of 1/8*/
+	TCCR1B |= _BV(CS11);
 	/* Clear the timer interrupt flag and begin timer */
 	TIFR1 |= _BV(OCF1A);
 
@@ -26,6 +26,6 @@ void mTimer(int count){ // delay microsecond
 			/*Timer resets automatically due to WGM settings*/
 		} //if end
 	}//while end
-	TCCR1B &= 0b11111000; //shut off timer 
+	TCCR1B &= 0b11111000; //shut off timer 1
 	return;
 } //mTimer

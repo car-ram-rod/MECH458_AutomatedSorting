@@ -35,9 +35,9 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define CONVEYOR_SPEED 30 //50 is maximum for sustainability
 
 /*Global Variables*/
-volatile unsigned int ADCResult; //16 bits: 0 => (2^17-1)
-volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1)
-volatile unsigned char HallEffect;
+volatile unsigned char ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
+volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
+volatile unsigned char HallEffect; //becomes set during stepper homing to know position
 unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00001101};
 
 /* Main Routine */
@@ -49,15 +49,13 @@ int main(int argc, char *argv[]){
 	int stepperIteration = 0b00001101;
 	//uint8_t motorDirection = 0b00;
 	uint8_t LEDisplay = 0x00;
-	HallEffect=0x00;
-
-
 
 	/*initializations*/
 	cli(); //disable interrupts
 	/*initialize clock to 8MHz*/
 	CLKPR = _BV(CLKPCE);
-	CLKPR = 0;	
+	CLKPR = 0;
+	
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM;
 	setupISR();
 	setupADC();
@@ -78,28 +76,16 @@ int main(int argc, char *argv[]){
 
 	// PORTB &= 0b0000; //start motor in specified direction
 	//PORTB |=0b1000;
+	HallEffect=0x00; //set HallEffect equal to zero so while loop is continuous until break out
 	stepperHome(&stepperPosition,&stepperIteration);
 	HallEffect=0x00;
 	while(1){
 		/*DC Motor Conveyor Test*/
-		//motorControl(k*10,DC_CW);//forwards?
-			/*stepper function testing*/
-			//stepperControl(17,&stepperPosition,&stepperIteration); //~30 degrees
-			//stepperControl(33,&stepperPosition,&stepperIteration); //~60 degrees
-			//stepperControl(100,&stepperPosition,&stepperIteration); //180 degrees
-			//stepperControl(-100,&stepperPosition,&stepperIteration); //-180 degrees
-			//stepperControl(33,&stepperPosition,&stepperIteration); //~-60 degrees
-			//stepperControl(17,&stepperPosition,&stepperIteration); //~-30 degrees
-		//}
+		//motorControl(CONVEYOR_SPEED,DC_FORWARD);//forwards at 30%
 		/*stepper function testing*/
-		//stepperControl(-100,&stepperPosition,&stepperIteration); /*stepper function testing*/
-		/*If rising edge has been recognized*/
-		if(ADCResultFlag){
-			LEDisplay = (ADCResult/4);
-			PORTC = LEDisplay;
-			ADCResultFlag = 0; //reset flag
-			ADCSRA |= _BV(ADSC); //re-initialize conversion (Feb 19, 2018: not connected to external interrupt)
-		}
+		stepperControl(50,&stepperPosition,&stepperIteration); /*stepper function testing*/
+		mTimer(1000);
+
 		
 	}
 	return (0); //This line returns a 0 value to the calling program
@@ -110,9 +96,8 @@ int main(int argc, char *argv[]){
 void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
-	/*variables made into #defines*/
 	uint8_t maxDelay = 20; //20ms corresponds to 50 steps per second
-	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
+	uint8_t minDelay = 10; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
 	uint8_t delay = maxDelay;
 	uint8_t offset = 0;
@@ -159,14 +144,17 @@ void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	return; //returns nothing
 }
 void stepperHome(int *stepperPos,int *stepperIt){
-	uint8_t maxDelay = 40; //20ms corresponds to 50 steps per second
-
-	int i;
-	for(i=0; i<101;i++){
+	uint8_t delay = 30; //20ms corresponds to 50 steps per second
+	int i=0;
+	PORTA=0x00;
+	while (HallEffect==0){
 		PORTA = stepperSigOrd[i%4];
-		//PORTC = stepperSigOrd[i%4];
-		mTimer(maxDelay);
+		mTimer(delay);
+		i++;
 	}
+	/*Insert code here to compensate for offset*/
+	//
+	//	
 	*stepperPos=0; //base stepper position (on black)
 	*stepperIt = stepperSigOrd[(i-1)%4]; //remember current setting of stepper
 }
@@ -178,19 +166,21 @@ void setupPWM(int motorDuty){
 	//TCCR0B &= 0b11110111;//WGM02 set to 0; (_BV(2) => 0x01 << 2)
 	//TIMSK0 |= _BV(1);//enable interrupt for execution upon compare match in Timer/Counter 0; UNNEEDED due to sei(); above
 	//TCCR0A &= 0b10111111;
-	TCCR0B |= _BV(CS01);//Set clock pre-scalar to No-Prescaling: 3.905kHz measured on PB7*
+	TCCR0B |= _BV(CS01) | _BV(CS00);//Set clock pre-scalar (8MHz*1/64): 488Hz measured on PB7*
 	//TCCR0B &= 0b11111101;
 	dutyCycle = motorDuty*2.55;
 	OCR0A = dutyCycle;//set duty cycle/start motor
+	PORTB &= 0xF0; //Apply Vcc brake to conveyor
 }
 void setupISR(void){
+	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
 	EIMSK |= (_BV(INT6) | _BV(INT2)) | (_BV(INT0)); //enable INT6, INT2 and INT0
 	EICRA |= _BV(ISC21) | _BV(ISC20) | _BV(ISC01) | _BV(ISC00); //rising edge interrupt; EICRA determines INT3:0
-	EICRB |= _BV(ISC61); //falling edge for INT4 Hall Effect; EICRB determines INT7:4
+	EICRB |= _BV(ISC61); //falling edge for INT6 Hall Effect; EICRB determines INT7:4
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
-	ADMUX |= _BV(REFS0) | _BV(0); //AVcc reference (3.3V);read from ADC 1
+	ADMUX |= _BV(REFS0) | _BV(MUX0) | _BV(ADLAR); //AVcc reference (3.3V);read from ADC 1;output left-adjusted
 	ADMUX &= 0b11100001; //reading from PF1 (ADC1); ADC0 works, but MCU has thermistor on pin...
 	//PORTF &= 0b11111110;
 }
@@ -218,15 +208,18 @@ ISR(INT2_vect){
 	ADCSRA |= _BV(ADSC);
 }
 
-ISR(INT6_vect){ //Active low for hall effect sensor on PE4
+ISR(INT6_vect){ //Active low for hall effect sensor on PE6
 	//when there is a rising edge on PD2, ADC is triggered which is currently ADC1 (PF1)
 	HallEffect=0x01;
 }
 
 /*ADC ISR: triggered when ADC is completed*/
 ISR(ADC_vect){
-	ADCResult = ADCL;
-	ADCResult += ADCH << 8;
+	/*ADLAR not set=0*/
+	//ADCResult = ADCL;
+	//ADCResult += ADCH << 8;
+	/*ADLAR set=1; reduced resolution (lose two least significant bits), but more efficient*/
+	ADCResult = ADCH;
 	ADCResultFlag = 1;
 }
 
