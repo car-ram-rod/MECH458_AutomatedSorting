@@ -30,7 +30,7 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define highNibMask 0xF0
 #define lowNibMask 0x0F
 #define DC_REVERSE 0x02 	//dc motor clock-wise
-#define DC_FORWARD	0x01	//dc motor counter-clockwise
+#define DC_FORWARD 0x01	//dc motor counter-clockwise
 #define DC_BRAKE 0x00 //dc motor brake
 #define CONVEYOR_SPEED 30 //50 is maximum for sustainability
 
@@ -55,6 +55,9 @@ int main(int argc, char *argv[]){
 
 	/*initializations*/
 	cli(); //disable interrupts
+	/*initialize clock to 8MHz*/
+	CLKPR = _BV(CLKPCE);
+	CLKPR = 0;	
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM;
 	setupISR();
 	setupADC();
@@ -107,6 +110,7 @@ int main(int argc, char *argv[]){
 void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
+	/*variables made into #defines*/
 	uint8_t maxDelay = 20; //20ms corresponds to 50 steps per second
 	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
@@ -144,15 +148,13 @@ void stepperControl(int steps,int *stepperPos,int *stepperIt){
 		}
 		/*determine direction and then iterate through stepper signals in correct direction*/
 		PORTA = stepperSigOrd[(CURRENT_ITERATION+DIRECTION*i)%4];
-		PORTC = stepperSigOrd[(CURRENT_ITERATION+DIRECTION*i)%4];
+		//PORTC = stepperSigOrd[(CURRENT_ITERATION+DIRECTION*i)%4];
 		mTimer(delay);
 	}
 	
 	*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
 	*stepperPos += steps;
 	*stepperPos %= 200; //represents 200 (0->199) steps of stepper positioning in a circle
-	/*better method would be to compare to Stepper Position*/
-	PORTA &= 0b11011011; //disable stepper motion while leaving other
 	
 	return; //returns nothing
 }
@@ -161,8 +163,8 @@ void stepperHome(int *stepperPos,int *stepperIt){
 
 	int i;
 	for(i=0; i<101;i++){
-		//PORTA = stepperSigOrd[i%4];
-		PORTC = stepperSigOrd[i%4];
+		PORTA = stepperSigOrd[i%4];
+		//PORTC = stepperSigOrd[i%4];
 		mTimer(maxDelay);
 	}
 	*stepperPos=0; //base stepper position (on black)
@@ -192,11 +194,11 @@ void setupADC(void){
 	ADMUX &= 0b11100001; //reading from PF1 (ADC1); ADC0 works, but MCU has thermistor on pin...
 	//PORTF &= 0b11111110;
 }
-void motorControl(int s, uint8_t d){
+void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted bits
 	uint8_t dutyCycle = 0;
 	if(((PINB & 0b00001100) >> 2) != d){ //if current direction doesn't match new direction
 		PORTB &= 0b11110000; //apply Vcc Brake
-		PORTB |= 0b0011 | ((d & 0b11) << 2); //start motor in specified direction
+		PORTB |= ((~d & 0b11) << 2) //start motor in specified direction
 	}
 	dutyCycle = s*2.55;
 	OCR0A = dutyCycle;//set duty cycle

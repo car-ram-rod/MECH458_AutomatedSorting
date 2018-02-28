@@ -116,8 +116,8 @@ int main(int argc, char *argv[]){
 void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
-	uint8_t maxDelay = 20; //20ms corresponds to 50 steps per second
-	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
+	uint8_t maxDelay = 40; //20ms corresponds to 50 steps per second
+	uint8_t minDelay = 32; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
 	uint8_t delay = maxDelay;
 	uint8_t offset = 0;

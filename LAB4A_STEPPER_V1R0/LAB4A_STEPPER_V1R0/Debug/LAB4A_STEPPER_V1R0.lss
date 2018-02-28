@@ -3,31 +3,31 @@ LAB4A_STEPPER_V1R0.elf:     file format elf32-avr
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
-  0 .data         00000008  00800100  0000051e  000005b2  2**0
+  0 .data         00000008  00800100  0000051c  000005b0  2**0
                   CONTENTS, ALLOC, LOAD, DATA
-  1 .text         0000051e  00000000  00000000  00000094  2**1
+  1 .text         0000051c  00000000  00000000  00000094  2**1
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  2 .bss          00000004  00800108  00800108  000005ba  2**0
+  2 .bss          00000004  00800108  00800108  000005b8  2**0
                   ALLOC
-  3 .comment      00000030  00000000  00000000  000005ba  2**0
+  3 .comment      00000030  00000000  00000000  000005b8  2**0
                   CONTENTS, READONLY
-  4 .note.gnu.avr.deviceinfo 00000040  00000000  00000000  000005ec  2**2
+  4 .note.gnu.avr.deviceinfo 00000040  00000000  00000000  000005e8  2**2
                   CONTENTS, READONLY
-  5 .debug_aranges 00000078  00000000  00000000  0000062c  2**0
+  5 .debug_aranges 00000078  00000000  00000000  00000628  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_info   000011e5  00000000  00000000  000006a4  2**0
+  6 .debug_info   000011e5  00000000  00000000  000006a0  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_abbrev 00000ccb  00000000  00000000  00001889  2**0
+  7 .debug_abbrev 00000ccb  00000000  00000000  00001885  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   00000604  00000000  00000000  00002554  2**0
+  8 .debug_line   00000604  00000000  00000000  00002550  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_frame  00000158  00000000  00000000  00002b58  2**2
+  9 .debug_frame  00000158  00000000  00000000  00002b54  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    000006aa  00000000  00000000  00002cb0  2**0
+ 10 .debug_str    00000701  00000000  00000000  00002cac  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    000006ae  00000000  00000000  0000335a  2**0
+ 11 .debug_loc    000006b2  00000000  00000000  000033ad  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 00000058  00000000  00000000  00003a08  2**0
+ 12 .debug_ranges 00000058  00000000  00000000  00003a5f  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -47,7 +47,7 @@ Disassembly of section .text:
   16:	00 00       	nop
   18:	5c c0       	rjmp	.+184    	; 0xd2 <__bad_interrupt>
   1a:	00 00       	nop
-  1c:	46 c2       	rjmp	.+1164   	; 0x4aa <__vector_7>
+  1c:	45 c2       	rjmp	.+1162   	; 0x4a8 <__vector_7>
   1e:	00 00       	nop
   20:	58 c0       	rjmp	.+176    	; 0xd2 <__bad_interrupt>
   22:	00 00       	nop
@@ -122,7 +122,7 @@ Disassembly of section .text:
   a4:	11 e0       	ldi	r17, 0x01	; 1
   a6:	a0 e0       	ldi	r26, 0x00	; 0
   a8:	b1 e0       	ldi	r27, 0x01	; 1
-  aa:	ee e1       	ldi	r30, 0x1E	; 30
+  aa:	ec e1       	ldi	r30, 0x1C	; 28
   ac:	f5 e0       	ldi	r31, 0x05	; 5
   ae:	00 e0       	ldi	r16, 0x00	; 0
   b0:	0b bf       	out	0x3b, r16	; 59
@@ -146,79 +146,42 @@ Disassembly of section .text:
   c8:	ac 30       	cpi	r26, 0x0C	; 12
   ca:	b2 07       	cpc	r27, r18
   cc:	e1 f7       	brne	.-8      	; 0xc6 <.do_clear_bss_loop>
-  ce:	51 d1       	rcall	.+674    	; 0x372 <main>
-  d0:	24 c2       	rjmp	.+1096   	; 0x51a <_exit>
+  ce:	50 d1       	rcall	.+672    	; 0x370 <main>
+  d0:	23 c2       	rjmp	.+1094   	; 0x518 <_exit>
 
 000000d2 <__bad_interrupt>:
   d2:	96 cf       	rjmp	.-212    	; 0x0 <__vectors>
 
 000000d4 <mTimer>:
-#include "interrupt.h"
-
-void mTimer(int count){ // delay microsecond
   d4:	ac 01       	movw	r20, r24
-	int i = 0; //initialize loop counter
-	/*set Waveform Generation mode to Clear Timer*/
-	/*set WGM bits to 0100*/
-	/*note WGM is spread over two registers*/
-	TCCR1B |= _BV(WGM12);
   d6:	e1 e8       	ldi	r30, 0x81	; 129
   d8:	f0 e0       	ldi	r31, 0x00	; 0
   da:	90 81       	ld	r25, Z
   dc:	98 60       	ori	r25, 0x08	; 8
   de:	90 83       	st	Z, r25
-	/*set Output Compare Register for 1000 cycles (1ms)*/
-	OCR1A = 0x03E8;
   e0:	88 ee       	ldi	r24, 0xE8	; 232
   e2:	93 e0       	ldi	r25, 0x03	; 3
   e4:	90 93 89 00 	sts	0x0089, r25	; 0x800089 <__TEXT_REGION_LENGTH__+0x7e0089>
   e8:	80 93 88 00 	sts	0x0088, r24	; 0x800088 <__TEXT_REGION_LENGTH__+0x7e0088>
-	/*set the initial value of the Timer rCounter to 0x0000*/
-	TCNT1 = 0x0000;
   ec:	10 92 85 00 	sts	0x0085, r1	; 0x800085 <__TEXT_REGION_LENGTH__+0x7e0085>
   f0:	10 92 84 00 	sts	0x0084, r1	; 0x800084 <__TEXT_REGION_LENGTH__+0x7e0084>
-	/*Enable the output compare interrupt enable*/
-	TIMSK1 = TIMSK1 | 0b00000010;
   f4:	ef e6       	ldi	r30, 0x6F	; 111
   f6:	f0 e0       	ldi	r31, 0x00	; 0
   f8:	90 81       	ld	r25, Z
   fa:	92 60       	ori	r25, 0x02	; 2
   fc:	90 83       	st	Z, r25
-	/* Clear the timer interrupt flag and begin timer */
-	TIFR1 |= _BV(OCF1A);
   fe:	b1 9a       	sbi	0x16, 1	; 22
-#include "interrupt.h"
-
-void mTimer(int count){ // delay microsecond
-	int i = 0; //initialize loop counter
  100:	20 e0       	ldi	r18, 0x00	; 0
  102:	30 e0       	ldi	r19, 0x00	; 0
-	/*Enable the output compare interrupt enable*/
-	TIMSK1 = TIMSK1 | 0b00000010;
-	/* Clear the timer interrupt flag and begin timer */
-	TIFR1 |= _BV(OCF1A);
-
-	while (i<count){
  104:	05 c0       	rjmp	.+10     	; 0x110 <mTimer+0x3c>
-		if ((TIFR1 & 0x02) == 0x02){
  106:	b1 9b       	sbis	0x16, 1	; 22
  108:	fe cf       	rjmp	.-4      	; 0x106 <mTimer+0x32>
-			//clear interrupt flag by WRITING a ONE to the bit
-			TIFR1 |= _BV(OCF1A);
  10a:	b1 9a       	sbi	0x16, 1	; 22
-			i++; //increment loop counter
  10c:	2f 5f       	subi	r18, 0xFF	; 255
  10e:	3f 4f       	sbci	r19, 0xFF	; 255
-	/*Enable the output compare interrupt enable*/
-	TIMSK1 = TIMSK1 | 0b00000010;
-	/* Clear the timer interrupt flag and begin timer */
-	TIFR1 |= _BV(OCF1A);
-
-	while (i<count){
  110:	24 17       	cp	r18, r20
  112:	35 07       	cpc	r19, r21
  114:	1c f4       	brge	.+6      	; 0x11c <mTimer+0x48>
-		if ((TIFR1 & 0x02) == 0x02){
  116:	b1 9b       	sbis	0x16, 1	; 22
  118:	f6 cf       	rjmp	.-20     	; 0x106 <mTimer+0x32>
  11a:	f7 cf       	rjmp	.-18     	; 0x10a <mTimer+0x36>
@@ -312,454 +275,453 @@ void mTimer(int count){ // delay microsecond
  1ca:	36 95       	lsr	r19
  1cc:	27 95       	ror	r18
  1ce:	92 2f       	mov	r25, r18
- 1d0:	34 e1       	ldi	r19, 0x14	; 20
+ 1d0:	38 e2       	ldi	r19, 0x28	; 40
  1d2:	23 2e       	mov	r2, r19
  1d4:	22 1a       	sub	r2, r18
- 1d6:	05 c0       	rjmp	.+10     	; 0x1e2 <stepperControl+0xc4>
+ 1d6:	04 c0       	rjmp	.+8      	; 0x1e0 <stepperControl+0xc2>
  1d8:	98 e0       	ldi	r25, 0x08	; 8
- 1da:	0f 2e       	mov	r0, r31
- 1dc:	fc e0       	ldi	r31, 0x0C	; 12
- 1de:	2f 2e       	mov	r2, r31
- 1e0:	f0 2d       	mov	r31, r0
- 1e2:	1c 14       	cp	r1, r12
- 1e4:	1d 04       	cpc	r1, r13
- 1e6:	24 f0       	brlt	.+8      	; 0x1f0 <stepperControl+0xd2>
- 1e8:	0d 2d       	mov	r16, r13
- 1ea:	00 0f       	add	r16, r16
- 1ec:	00 0b       	sbc	r16, r16
- 1ee:	01 c0       	rjmp	.+2      	; 0x1f2 <stepperControl+0xd4>
- 1f0:	01 e0       	ldi	r16, 0x01	; 1
- 1f2:	a0 2e       	mov	r10, r16
- 1f4:	b1 2c       	mov	r11, r1
- 1f6:	35 01       	movw	r6, r10
- 1f8:	68 0e       	add	r6, r24
- 1fa:	71 1c       	adc	r7, r1
- 1fc:	ed 81       	ldd	r30, Y+5	; 0x05
- 1fe:	fe 81       	ldd	r31, Y+6	; 0x06
- 200:	ef 2b       	or	r30, r31
- 202:	d9 f1       	breq	.+118    	; 0x27a <stepperControl+0x15c>
- 204:	85 01       	movw	r16, r10
- 206:	43 01       	movw	r8, r6
- 208:	0f 2e       	mov	r0, r31
- 20a:	f4 e1       	ldi	r31, 0x14	; 20
- 20c:	3f 2e       	mov	r3, r31
- 20e:	f0 2d       	mov	r31, r0
- 210:	e9 2e       	mov	r14, r25
- 212:	f1 2c       	mov	r15, r1
- 214:	2d 81       	ldd	r18, Y+5	; 0x05
- 216:	3e 81       	ldd	r19, Y+6	; 0x06
- 218:	e2 16       	cp	r14, r18
- 21a:	f3 06       	cpc	r15, r19
- 21c:	20 f4       	brcc	.+8      	; 0x226 <stepperControl+0x108>
- 21e:	23 14       	cp	r2, r3
- 220:	38 f4       	brcc	.+14     	; 0x230 <stepperControl+0x112>
- 222:	3a 94       	dec	r3
- 224:	0b c0       	rjmp	.+22     	; 0x23c <stepperControl+0x11e>
- 226:	33 e1       	ldi	r19, 0x13	; 19
- 228:	33 15       	cp	r19, r3
- 22a:	20 f0       	brcs	.+8      	; 0x234 <stepperControl+0x116>
- 22c:	33 94       	inc	r3
- 22e:	06 c0       	rjmp	.+12     	; 0x23c <stepperControl+0x11e>
- 230:	32 2c       	mov	r3, r2
- 232:	04 c0       	rjmp	.+8      	; 0x23c <stepperControl+0x11e>
- 234:	0f 2e       	mov	r0, r31
- 236:	f4 e1       	ldi	r31, 0x14	; 20
- 238:	3f 2e       	mov	r3, r31
- 23a:	f0 2d       	mov	r31, r0
- 23c:	c4 01       	movw	r24, r8
- 23e:	83 70       	andi	r24, 0x03	; 3
- 240:	90 78       	andi	r25, 0x80	; 128
- 242:	99 23       	and	r25, r25
- 244:	24 f4       	brge	.+8      	; 0x24e <stepperControl+0x130>
- 246:	01 97       	sbiw	r24, 0x01	; 1
- 248:	8c 6f       	ori	r24, 0xFC	; 252
- 24a:	9f 6f       	ori	r25, 0xFF	; 255
- 24c:	01 96       	adiw	r24, 0x01	; 1
- 24e:	88 0f       	add	r24, r24
- 250:	99 1f       	adc	r25, r25
- 252:	fc 01       	movw	r30, r24
- 254:	e0 50       	subi	r30, 0x00	; 0
- 256:	ff 4f       	sbci	r31, 0xFF	; 255
- 258:	80 81       	ld	r24, Z
- 25a:	82 b9       	out	0x02, r24	; 2
- 25c:	80 81       	ld	r24, Z
- 25e:	88 b9       	out	0x08, r24	; 8
- 260:	83 2d       	mov	r24, r3
- 262:	90 e0       	ldi	r25, 0x00	; 0
- 264:	37 df       	rcall	.-402    	; 0xd4 <mTimer>
- 266:	8d 81       	ldd	r24, Y+5	; 0x05
- 268:	9e 81       	ldd	r25, Y+6	; 0x06
- 26a:	01 97       	sbiw	r24, 0x01	; 1
- 26c:	9e 83       	std	Y+6, r25	; 0x06
- 26e:	8d 83       	std	Y+5, r24	; 0x05
- 270:	80 0e       	add	r8, r16
- 272:	91 1e       	adc	r9, r17
- 274:	89 2b       	or	r24, r25
- 276:	71 f6       	brne	.-100    	; 0x214 <stepperControl+0xf6>
- 278:	02 c0       	rjmp	.+4      	; 0x27e <stepperControl+0x160>
- 27a:	41 2c       	mov	r4, r1
- 27c:	51 2c       	mov	r5, r1
- 27e:	92 01       	movw	r18, r4
- 280:	21 50       	subi	r18, 0x01	; 1
- 282:	31 09       	sbc	r19, r1
- 284:	2a 9d       	mul	r18, r10
- 286:	c0 01       	movw	r24, r0
- 288:	2b 9d       	mul	r18, r11
- 28a:	90 0d       	add	r25, r0
- 28c:	3a 9d       	mul	r19, r10
- 28e:	90 0d       	add	r25, r0
- 290:	11 24       	eor	r1, r1
- 292:	86 0d       	add	r24, r6
- 294:	97 1d       	adc	r25, r7
- 296:	83 70       	andi	r24, 0x03	; 3
- 298:	90 78       	andi	r25, 0x80	; 128
- 29a:	99 23       	and	r25, r25
- 29c:	24 f4       	brge	.+8      	; 0x2a6 <stepperControl+0x188>
- 29e:	01 97       	sbiw	r24, 0x01	; 1
- 2a0:	8c 6f       	ori	r24, 0xFC	; 252
- 2a2:	9f 6f       	ori	r25, 0xFF	; 255
- 2a4:	01 96       	adiw	r24, 0x01	; 1
- 2a6:	88 0f       	add	r24, r24
- 2a8:	99 1f       	adc	r25, r25
- 2aa:	fc 01       	movw	r30, r24
- 2ac:	e0 50       	subi	r30, 0x00	; 0
- 2ae:	ff 4f       	sbci	r31, 0xFF	; 255
- 2b0:	80 81       	ld	r24, Z
- 2b2:	91 81       	ldd	r25, Z+1	; 0x01
- 2b4:	eb 81       	ldd	r30, Y+3	; 0x03
- 2b6:	fc 81       	ldd	r31, Y+4	; 0x04
- 2b8:	91 83       	std	Z+1, r25	; 0x01
- 2ba:	80 83       	st	Z, r24
- 2bc:	e9 81       	ldd	r30, Y+1	; 0x01
- 2be:	fa 81       	ldd	r31, Y+2	; 0x02
- 2c0:	80 81       	ld	r24, Z
- 2c2:	91 81       	ldd	r25, Z+1	; 0x01
- 2c4:	8c 0d       	add	r24, r12
- 2c6:	9d 1d       	adc	r25, r13
- 2c8:	68 ec       	ldi	r22, 0xC8	; 200
- 2ca:	70 e0       	ldi	r23, 0x00	; 0
- 2cc:	ff d0       	rcall	.+510    	; 0x4cc <__divmodhi4>
- 2ce:	91 83       	std	Z+1, r25	; 0x01
- 2d0:	80 83       	st	Z, r24
- 2d2:	82 b1       	in	r24, 0x02	; 2
- 2d4:	8b 7d       	andi	r24, 0xDB	; 219
- 2d6:	82 b9       	out	0x02, r24	; 2
- 2d8:	26 96       	adiw	r28, 0x06	; 6
- 2da:	0f b6       	in	r0, 0x3f	; 63
- 2dc:	f8 94       	cli
- 2de:	de bf       	out	0x3e, r29	; 62
- 2e0:	0f be       	out	0x3f, r0	; 63
- 2e2:	cd bf       	out	0x3d, r28	; 61
- 2e4:	df 91       	pop	r29
- 2e6:	cf 91       	pop	r28
- 2e8:	1f 91       	pop	r17
- 2ea:	0f 91       	pop	r16
- 2ec:	ff 90       	pop	r15
- 2ee:	ef 90       	pop	r14
- 2f0:	df 90       	pop	r13
- 2f2:	cf 90       	pop	r12
- 2f4:	bf 90       	pop	r11
- 2f6:	af 90       	pop	r10
- 2f8:	9f 90       	pop	r9
- 2fa:	8f 90       	pop	r8
- 2fc:	7f 90       	pop	r7
- 2fe:	6f 90       	pop	r6
- 300:	5f 90       	pop	r5
- 302:	4f 90       	pop	r4
- 304:	3f 90       	pop	r3
- 306:	2f 90       	pop	r2
- 308:	08 95       	ret
+ 1da:	68 94       	set
+ 1dc:	22 24       	eor	r2, r2
+ 1de:	25 f8       	bld	r2, 5
+ 1e0:	1c 14       	cp	r1, r12
+ 1e2:	1d 04       	cpc	r1, r13
+ 1e4:	24 f0       	brlt	.+8      	; 0x1ee <stepperControl+0xd0>
+ 1e6:	0d 2d       	mov	r16, r13
+ 1e8:	00 0f       	add	r16, r16
+ 1ea:	00 0b       	sbc	r16, r16
+ 1ec:	01 c0       	rjmp	.+2      	; 0x1f0 <stepperControl+0xd2>
+ 1ee:	01 e0       	ldi	r16, 0x01	; 1
+ 1f0:	a0 2e       	mov	r10, r16
+ 1f2:	b1 2c       	mov	r11, r1
+ 1f4:	35 01       	movw	r6, r10
+ 1f6:	68 0e       	add	r6, r24
+ 1f8:	71 1c       	adc	r7, r1
+ 1fa:	ed 81       	ldd	r30, Y+5	; 0x05
+ 1fc:	fe 81       	ldd	r31, Y+6	; 0x06
+ 1fe:	ef 2b       	or	r30, r31
+ 200:	d9 f1       	breq	.+118    	; 0x278 <stepperControl+0x15a>
+ 202:	85 01       	movw	r16, r10
+ 204:	43 01       	movw	r8, r6
+ 206:	0f 2e       	mov	r0, r31
+ 208:	f8 e2       	ldi	r31, 0x28	; 40
+ 20a:	3f 2e       	mov	r3, r31
+ 20c:	f0 2d       	mov	r31, r0
+ 20e:	e9 2e       	mov	r14, r25
+ 210:	f1 2c       	mov	r15, r1
+ 212:	2d 81       	ldd	r18, Y+5	; 0x05
+ 214:	3e 81       	ldd	r19, Y+6	; 0x06
+ 216:	e2 16       	cp	r14, r18
+ 218:	f3 06       	cpc	r15, r19
+ 21a:	20 f4       	brcc	.+8      	; 0x224 <stepperControl+0x106>
+ 21c:	23 14       	cp	r2, r3
+ 21e:	38 f4       	brcc	.+14     	; 0x22e <stepperControl+0x110>
+ 220:	3a 94       	dec	r3
+ 222:	0b c0       	rjmp	.+22     	; 0x23a <stepperControl+0x11c>
+ 224:	37 e2       	ldi	r19, 0x27	; 39
+ 226:	33 15       	cp	r19, r3
+ 228:	20 f0       	brcs	.+8      	; 0x232 <stepperControl+0x114>
+ 22a:	33 94       	inc	r3
+ 22c:	06 c0       	rjmp	.+12     	; 0x23a <stepperControl+0x11c>
+ 22e:	32 2c       	mov	r3, r2
+ 230:	04 c0       	rjmp	.+8      	; 0x23a <stepperControl+0x11c>
+ 232:	0f 2e       	mov	r0, r31
+ 234:	f8 e2       	ldi	r31, 0x28	; 40
+ 236:	3f 2e       	mov	r3, r31
+ 238:	f0 2d       	mov	r31, r0
+ 23a:	c4 01       	movw	r24, r8
+ 23c:	83 70       	andi	r24, 0x03	; 3
+ 23e:	90 78       	andi	r25, 0x80	; 128
+ 240:	99 23       	and	r25, r25
+ 242:	24 f4       	brge	.+8      	; 0x24c <stepperControl+0x12e>
+ 244:	01 97       	sbiw	r24, 0x01	; 1
+ 246:	8c 6f       	ori	r24, 0xFC	; 252
+ 248:	9f 6f       	ori	r25, 0xFF	; 255
+ 24a:	01 96       	adiw	r24, 0x01	; 1
+ 24c:	88 0f       	add	r24, r24
+ 24e:	99 1f       	adc	r25, r25
+ 250:	fc 01       	movw	r30, r24
+ 252:	e0 50       	subi	r30, 0x00	; 0
+ 254:	ff 4f       	sbci	r31, 0xFF	; 255
+ 256:	80 81       	ld	r24, Z
+ 258:	82 b9       	out	0x02, r24	; 2
+ 25a:	80 81       	ld	r24, Z
+ 25c:	88 b9       	out	0x08, r24	; 8
+ 25e:	83 2d       	mov	r24, r3
+ 260:	90 e0       	ldi	r25, 0x00	; 0
+ 262:	38 df       	rcall	.-400    	; 0xd4 <mTimer>
+ 264:	8d 81       	ldd	r24, Y+5	; 0x05
+ 266:	9e 81       	ldd	r25, Y+6	; 0x06
+ 268:	01 97       	sbiw	r24, 0x01	; 1
+ 26a:	9e 83       	std	Y+6, r25	; 0x06
+ 26c:	8d 83       	std	Y+5, r24	; 0x05
+ 26e:	80 0e       	add	r8, r16
+ 270:	91 1e       	adc	r9, r17
+ 272:	89 2b       	or	r24, r25
+ 274:	71 f6       	brne	.-100    	; 0x212 <stepperControl+0xf4>
+ 276:	02 c0       	rjmp	.+4      	; 0x27c <stepperControl+0x15e>
+ 278:	41 2c       	mov	r4, r1
+ 27a:	51 2c       	mov	r5, r1
+ 27c:	92 01       	movw	r18, r4
+ 27e:	21 50       	subi	r18, 0x01	; 1
+ 280:	31 09       	sbc	r19, r1
+ 282:	2a 9d       	mul	r18, r10
+ 284:	c0 01       	movw	r24, r0
+ 286:	2b 9d       	mul	r18, r11
+ 288:	90 0d       	add	r25, r0
+ 28a:	3a 9d       	mul	r19, r10
+ 28c:	90 0d       	add	r25, r0
+ 28e:	11 24       	eor	r1, r1
+ 290:	86 0d       	add	r24, r6
+ 292:	97 1d       	adc	r25, r7
+ 294:	83 70       	andi	r24, 0x03	; 3
+ 296:	90 78       	andi	r25, 0x80	; 128
+ 298:	99 23       	and	r25, r25
+ 29a:	24 f4       	brge	.+8      	; 0x2a4 <stepperControl+0x186>
+ 29c:	01 97       	sbiw	r24, 0x01	; 1
+ 29e:	8c 6f       	ori	r24, 0xFC	; 252
+ 2a0:	9f 6f       	ori	r25, 0xFF	; 255
+ 2a2:	01 96       	adiw	r24, 0x01	; 1
+ 2a4:	88 0f       	add	r24, r24
+ 2a6:	99 1f       	adc	r25, r25
+ 2a8:	fc 01       	movw	r30, r24
+ 2aa:	e0 50       	subi	r30, 0x00	; 0
+ 2ac:	ff 4f       	sbci	r31, 0xFF	; 255
+ 2ae:	80 81       	ld	r24, Z
+ 2b0:	91 81       	ldd	r25, Z+1	; 0x01
+ 2b2:	eb 81       	ldd	r30, Y+3	; 0x03
+ 2b4:	fc 81       	ldd	r31, Y+4	; 0x04
+ 2b6:	91 83       	std	Z+1, r25	; 0x01
+ 2b8:	80 83       	st	Z, r24
+ 2ba:	e9 81       	ldd	r30, Y+1	; 0x01
+ 2bc:	fa 81       	ldd	r31, Y+2	; 0x02
+ 2be:	80 81       	ld	r24, Z
+ 2c0:	91 81       	ldd	r25, Z+1	; 0x01
+ 2c2:	8c 0d       	add	r24, r12
+ 2c4:	9d 1d       	adc	r25, r13
+ 2c6:	68 ec       	ldi	r22, 0xC8	; 200
+ 2c8:	70 e0       	ldi	r23, 0x00	; 0
+ 2ca:	ff d0       	rcall	.+510    	; 0x4ca <__divmodhi4>
+ 2cc:	91 83       	std	Z+1, r25	; 0x01
+ 2ce:	80 83       	st	Z, r24
+ 2d0:	82 b1       	in	r24, 0x02	; 2
+ 2d2:	8b 7d       	andi	r24, 0xDB	; 219
+ 2d4:	82 b9       	out	0x02, r24	; 2
+ 2d6:	26 96       	adiw	r28, 0x06	; 6
+ 2d8:	0f b6       	in	r0, 0x3f	; 63
+ 2da:	f8 94       	cli
+ 2dc:	de bf       	out	0x3e, r29	; 62
+ 2de:	0f be       	out	0x3f, r0	; 63
+ 2e0:	cd bf       	out	0x3d, r28	; 61
+ 2e2:	df 91       	pop	r29
+ 2e4:	cf 91       	pop	r28
+ 2e6:	1f 91       	pop	r17
+ 2e8:	0f 91       	pop	r16
+ 2ea:	ff 90       	pop	r15
+ 2ec:	ef 90       	pop	r14
+ 2ee:	df 90       	pop	r13
+ 2f0:	cf 90       	pop	r12
+ 2f2:	bf 90       	pop	r11
+ 2f4:	af 90       	pop	r10
+ 2f6:	9f 90       	pop	r9
+ 2f8:	8f 90       	pop	r8
+ 2fa:	7f 90       	pop	r7
+ 2fc:	6f 90       	pop	r6
+ 2fe:	5f 90       	pop	r5
+ 300:	4f 90       	pop	r4
+ 302:	3f 90       	pop	r3
+ 304:	2f 90       	pop	r2
+ 306:	08 95       	ret
 
-0000030a <stepperHome>:
- 30a:	ef 92       	push	r14
- 30c:	ff 92       	push	r15
- 30e:	0f 93       	push	r16
- 310:	1f 93       	push	r17
- 312:	cf 93       	push	r28
- 314:	df 93       	push	r29
- 316:	8c 01       	movw	r16, r24
- 318:	eb 01       	movw	r28, r22
- 31a:	e1 2c       	mov	r14, r1
- 31c:	f1 2c       	mov	r15, r1
- 31e:	c7 01       	movw	r24, r14
- 320:	83 70       	andi	r24, 0x03	; 3
- 322:	90 78       	andi	r25, 0x80	; 128
- 324:	99 23       	and	r25, r25
- 326:	24 f4       	brge	.+8      	; 0x330 <stepperHome+0x26>
- 328:	01 97       	sbiw	r24, 0x01	; 1
- 32a:	8c 6f       	ori	r24, 0xFC	; 252
- 32c:	9f 6f       	ori	r25, 0xFF	; 255
- 32e:	01 96       	adiw	r24, 0x01	; 1
- 330:	88 0f       	add	r24, r24
- 332:	99 1f       	adc	r25, r25
- 334:	fc 01       	movw	r30, r24
- 336:	e0 50       	subi	r30, 0x00	; 0
- 338:	ff 4f       	sbci	r31, 0xFF	; 255
- 33a:	80 81       	ld	r24, Z
- 33c:	88 b9       	out	0x08, r24	; 8
- 33e:	88 e2       	ldi	r24, 0x28	; 40
- 340:	90 e0       	ldi	r25, 0x00	; 0
- 342:	c8 de       	rcall	.-624    	; 0xd4 <mTimer>
- 344:	8f ef       	ldi	r24, 0xFF	; 255
- 346:	e8 1a       	sub	r14, r24
- 348:	f8 0a       	sbc	r15, r24
- 34a:	e5 e6       	ldi	r30, 0x65	; 101
- 34c:	ee 16       	cp	r14, r30
- 34e:	f1 04       	cpc	r15, r1
- 350:	31 f7       	brne	.-52     	; 0x31e <stepperHome+0x14>
- 352:	f8 01       	movw	r30, r16
- 354:	11 82       	std	Z+1, r1	; 0x01
- 356:	10 82       	st	Z, r1
- 358:	80 91 00 01 	lds	r24, 0x0100	; 0x800100 <__data_start>
- 35c:	90 91 01 01 	lds	r25, 0x0101	; 0x800101 <__data_start+0x1>
- 360:	99 83       	std	Y+1, r25	; 0x01
- 362:	88 83       	st	Y, r24
- 364:	df 91       	pop	r29
- 366:	cf 91       	pop	r28
- 368:	1f 91       	pop	r17
- 36a:	0f 91       	pop	r16
- 36c:	ff 90       	pop	r15
- 36e:	ef 90       	pop	r14
- 370:	08 95       	ret
+00000308 <stepperHome>:
+ 308:	ef 92       	push	r14
+ 30a:	ff 92       	push	r15
+ 30c:	0f 93       	push	r16
+ 30e:	1f 93       	push	r17
+ 310:	cf 93       	push	r28
+ 312:	df 93       	push	r29
+ 314:	8c 01       	movw	r16, r24
+ 316:	eb 01       	movw	r28, r22
+ 318:	e1 2c       	mov	r14, r1
+ 31a:	f1 2c       	mov	r15, r1
+ 31c:	c7 01       	movw	r24, r14
+ 31e:	83 70       	andi	r24, 0x03	; 3
+ 320:	90 78       	andi	r25, 0x80	; 128
+ 322:	99 23       	and	r25, r25
+ 324:	24 f4       	brge	.+8      	; 0x32e <stepperHome+0x26>
+ 326:	01 97       	sbiw	r24, 0x01	; 1
+ 328:	8c 6f       	ori	r24, 0xFC	; 252
+ 32a:	9f 6f       	ori	r25, 0xFF	; 255
+ 32c:	01 96       	adiw	r24, 0x01	; 1
+ 32e:	88 0f       	add	r24, r24
+ 330:	99 1f       	adc	r25, r25
+ 332:	fc 01       	movw	r30, r24
+ 334:	e0 50       	subi	r30, 0x00	; 0
+ 336:	ff 4f       	sbci	r31, 0xFF	; 255
+ 338:	80 81       	ld	r24, Z
+ 33a:	88 b9       	out	0x08, r24	; 8
+ 33c:	88 e2       	ldi	r24, 0x28	; 40
+ 33e:	90 e0       	ldi	r25, 0x00	; 0
+ 340:	c9 de       	rcall	.-622    	; 0xd4 <mTimer>
+ 342:	8f ef       	ldi	r24, 0xFF	; 255
+ 344:	e8 1a       	sub	r14, r24
+ 346:	f8 0a       	sbc	r15, r24
+ 348:	e5 e6       	ldi	r30, 0x65	; 101
+ 34a:	ee 16       	cp	r14, r30
+ 34c:	f1 04       	cpc	r15, r1
+ 34e:	31 f7       	brne	.-52     	; 0x31c <stepperHome+0x14>
+ 350:	f8 01       	movw	r30, r16
+ 352:	11 82       	std	Z+1, r1	; 0x01
+ 354:	10 82       	st	Z, r1
+ 356:	80 91 00 01 	lds	r24, 0x0100	; 0x800100 <__data_start>
+ 35a:	90 91 01 01 	lds	r25, 0x0101	; 0x800101 <__data_start+0x1>
+ 35e:	99 83       	std	Y+1, r25	; 0x01
+ 360:	88 83       	st	Y, r24
+ 362:	df 91       	pop	r29
+ 364:	cf 91       	pop	r28
+ 366:	1f 91       	pop	r17
+ 368:	0f 91       	pop	r16
+ 36a:	ff 90       	pop	r15
+ 36c:	ef 90       	pop	r14
+ 36e:	08 95       	ret
 
-00000372 <main>:
- 372:	cf 93       	push	r28
- 374:	df 93       	push	r29
- 376:	00 d0       	rcall	.+0      	; 0x378 <main+0x6>
- 378:	00 d0       	rcall	.+0      	; 0x37a <main+0x8>
- 37a:	cd b7       	in	r28, 0x3d	; 61
- 37c:	de b7       	in	r29, 0x3e	; 62
- 37e:	1a 82       	std	Y+2, r1	; 0x02
- 380:	19 82       	std	Y+1, r1	; 0x01
- 382:	8d e0       	ldi	r24, 0x0D	; 13
- 384:	90 e0       	ldi	r25, 0x00	; 0
- 386:	9c 83       	std	Y+4, r25	; 0x04
- 388:	8b 83       	std	Y+3, r24	; 0x03
- 38a:	10 92 09 01 	sts	0x0109, r1	; 0x800109 <HallEffect>
- 38e:	f8 94       	cli
- 390:	8f ef       	ldi	r24, 0xFF	; 255
- 392:	81 b9       	out	0x01, r24	; 1
- 394:	87 b9       	out	0x07, r24	; 7
- 396:	1d b8       	out	0x0d, r1	; 13
- 398:	10 ba       	out	0x10, r1	; 16
- 39a:	e1 e8       	ldi	r30, 0x81	; 129
- 39c:	f0 e0       	ldi	r31, 0x00	; 0
- 39e:	80 81       	ld	r24, Z
- 3a0:	81 60       	ori	r24, 0x01	; 1
- 3a2:	80 83       	st	Z, r24
- 3a4:	be 01       	movw	r22, r28
- 3a6:	6d 5f       	subi	r22, 0xFD	; 253
- 3a8:	7f 4f       	sbci	r23, 0xFF	; 255
- 3aa:	ce 01       	movw	r24, r28
- 3ac:	01 96       	adiw	r24, 0x01	; 1
- 3ae:	ad df       	rcall	.-166    	; 0x30a <stepperHome>
- 3b0:	88 ee       	ldi	r24, 0xE8	; 232
- 3b2:	93 e0       	ldi	r25, 0x03	; 3
- 3b4:	8f de       	rcall	.-738    	; 0xd4 <mTimer>
- 3b6:	80 ec       	ldi	r24, 0xC0	; 192
- 3b8:	88 b9       	out	0x08, r24	; 8
- 3ba:	88 ee       	ldi	r24, 0xE8	; 232
- 3bc:	93 e0       	ldi	r25, 0x03	; 3
- 3be:	8a de       	rcall	.-748    	; 0xd4 <mTimer>
- 3c0:	8b 81       	ldd	r24, Y+3	; 0x03
- 3c2:	88 b9       	out	0x08, r24	; 8
- 3c4:	88 ee       	ldi	r24, 0xE8	; 232
- 3c6:	93 e0       	ldi	r25, 0x03	; 3
- 3c8:	85 de       	rcall	.-758    	; 0xd4 <mTimer>
- 3ca:	10 92 09 01 	sts	0x0109, r1	; 0x800109 <HallEffect>
- 3ce:	ee 24       	eor	r14, r14
- 3d0:	e3 94       	inc	r14
- 3d2:	f1 2c       	mov	r15, r1
- 3d4:	00 e0       	ldi	r16, 0x00	; 0
- 3d6:	10 e0       	ldi	r17, 0x00	; 0
- 3d8:	c7 01       	movw	r24, r14
- 3da:	00 2e       	mov	r0, r16
- 3dc:	02 c0       	rjmp	.+4      	; 0x3e2 <main+0x70>
- 3de:	88 0f       	add	r24, r24
- 3e0:	99 1f       	adc	r25, r25
- 3e2:	0a 94       	dec	r0
- 3e4:	e2 f7       	brpl	.-8      	; 0x3de <main+0x6c>
- 3e6:	88 b9       	out	0x08, r24	; 8
- 3e8:	88 ec       	ldi	r24, 0xC8	; 200
- 3ea:	90 e0       	ldi	r25, 0x00	; 0
- 3ec:	73 de       	rcall	.-794    	; 0xd4 <mTimer>
- 3ee:	0f 5f       	subi	r16, 0xFF	; 255
- 3f0:	1f 4f       	sbci	r17, 0xFF	; 255
- 3f2:	08 30       	cpi	r16, 0x08	; 8
- 3f4:	11 05       	cpc	r17, r1
- 3f6:	81 f7       	brne	.-32     	; 0x3d8 <main+0x66>
- 3f8:	06 e0       	ldi	r16, 0x06	; 6
- 3fa:	10 e0       	ldi	r17, 0x00	; 0
- 3fc:	c7 01       	movw	r24, r14
- 3fe:	00 2e       	mov	r0, r16
- 400:	02 c0       	rjmp	.+4      	; 0x406 <__LOCK_REGION_LENGTH__+0x6>
- 402:	88 0f       	add	r24, r24
- 404:	99 1f       	adc	r25, r25
- 406:	0a 94       	dec	r0
- 408:	e2 f7       	brpl	.-8      	; 0x402 <__LOCK_REGION_LENGTH__+0x2>
- 40a:	88 b9       	out	0x08, r24	; 8
- 40c:	88 ec       	ldi	r24, 0xC8	; 200
- 40e:	90 e0       	ldi	r25, 0x00	; 0
- 410:	61 de       	rcall	.-830    	; 0xd4 <mTimer>
- 412:	01 50       	subi	r16, 0x01	; 1
- 414:	11 09       	sbc	r17, r1
- 416:	90 f7       	brcc	.-28     	; 0x3fc <main+0x8a>
- 418:	ae 01       	movw	r20, r28
- 41a:	4d 5f       	subi	r20, 0xFD	; 253
- 41c:	5f 4f       	sbci	r21, 0xFF	; 255
- 41e:	be 01       	movw	r22, r28
- 420:	6f 5f       	subi	r22, 0xFF	; 255
- 422:	7f 4f       	sbci	r23, 0xFF	; 255
- 424:	81 e1       	ldi	r24, 0x11	; 17
- 426:	90 e0       	ldi	r25, 0x00	; 0
- 428:	7a de       	rcall	.-780    	; 0x11e <stepperControl>
- 42a:	8c ed       	ldi	r24, 0xDC	; 220
- 42c:	95 e0       	ldi	r25, 0x05	; 5
- 42e:	52 de       	rcall	.-860    	; 0xd4 <mTimer>
- 430:	ae 01       	movw	r20, r28
- 432:	4d 5f       	subi	r20, 0xFD	; 253
- 434:	5f 4f       	sbci	r21, 0xFF	; 255
- 436:	be 01       	movw	r22, r28
- 438:	6f 5f       	subi	r22, 0xFF	; 255
- 43a:	7f 4f       	sbci	r23, 0xFF	; 255
- 43c:	81 e2       	ldi	r24, 0x21	; 33
- 43e:	90 e0       	ldi	r25, 0x00	; 0
- 440:	6e de       	rcall	.-804    	; 0x11e <stepperControl>
- 442:	8c ed       	ldi	r24, 0xDC	; 220
- 444:	95 e0       	ldi	r25, 0x05	; 5
- 446:	46 de       	rcall	.-884    	; 0xd4 <mTimer>
- 448:	ae 01       	movw	r20, r28
- 44a:	4d 5f       	subi	r20, 0xFD	; 253
- 44c:	5f 4f       	sbci	r21, 0xFF	; 255
- 44e:	be 01       	movw	r22, r28
- 450:	6f 5f       	subi	r22, 0xFF	; 255
- 452:	7f 4f       	sbci	r23, 0xFF	; 255
- 454:	84 e6       	ldi	r24, 0x64	; 100
- 456:	90 e0       	ldi	r25, 0x00	; 0
- 458:	62 de       	rcall	.-828    	; 0x11e <stepperControl>
- 45a:	8c ed       	ldi	r24, 0xDC	; 220
- 45c:	95 e0       	ldi	r25, 0x05	; 5
- 45e:	3a de       	rcall	.-908    	; 0xd4 <mTimer>
- 460:	ae 01       	movw	r20, r28
- 462:	4d 5f       	subi	r20, 0xFD	; 253
- 464:	5f 4f       	sbci	r21, 0xFF	; 255
- 466:	be 01       	movw	r22, r28
- 468:	6f 5f       	subi	r22, 0xFF	; 255
- 46a:	7f 4f       	sbci	r23, 0xFF	; 255
- 46c:	8c e9       	ldi	r24, 0x9C	; 156
- 46e:	9f ef       	ldi	r25, 0xFF	; 255
- 470:	56 de       	rcall	.-852    	; 0x11e <stepperControl>
- 472:	8c ed       	ldi	r24, 0xDC	; 220
- 474:	95 e0       	ldi	r25, 0x05	; 5
- 476:	2e de       	rcall	.-932    	; 0xd4 <mTimer>
- 478:	ae 01       	movw	r20, r28
- 47a:	4d 5f       	subi	r20, 0xFD	; 253
- 47c:	5f 4f       	sbci	r21, 0xFF	; 255
- 47e:	be 01       	movw	r22, r28
- 480:	6f 5f       	subi	r22, 0xFF	; 255
- 482:	7f 4f       	sbci	r23, 0xFF	; 255
- 484:	8f ed       	ldi	r24, 0xDF	; 223
- 486:	9f ef       	ldi	r25, 0xFF	; 255
- 488:	4a de       	rcall	.-876    	; 0x11e <stepperControl>
- 48a:	8c ed       	ldi	r24, 0xDC	; 220
- 48c:	95 e0       	ldi	r25, 0x05	; 5
- 48e:	22 de       	rcall	.-956    	; 0xd4 <mTimer>
- 490:	ae 01       	movw	r20, r28
- 492:	4d 5f       	subi	r20, 0xFD	; 253
- 494:	5f 4f       	sbci	r21, 0xFF	; 255
- 496:	be 01       	movw	r22, r28
- 498:	6f 5f       	subi	r22, 0xFF	; 255
- 49a:	7f 4f       	sbci	r23, 0xFF	; 255
- 49c:	8f ee       	ldi	r24, 0xEF	; 239
- 49e:	9f ef       	ldi	r25, 0xFF	; 255
- 4a0:	3e de       	rcall	.-900    	; 0x11e <stepperControl>
- 4a2:	8c ed       	ldi	r24, 0xDC	; 220
- 4a4:	95 e0       	ldi	r25, 0x05	; 5
- 4a6:	16 de       	rcall	.-980    	; 0xd4 <mTimer>
- 4a8:	95 cf       	rjmp	.-214    	; 0x3d4 <main+0x62>
+00000370 <main>:
+ 370:	cf 93       	push	r28
+ 372:	df 93       	push	r29
+ 374:	00 d0       	rcall	.+0      	; 0x376 <main+0x6>
+ 376:	00 d0       	rcall	.+0      	; 0x378 <main+0x8>
+ 378:	cd b7       	in	r28, 0x3d	; 61
+ 37a:	de b7       	in	r29, 0x3e	; 62
+ 37c:	1a 82       	std	Y+2, r1	; 0x02
+ 37e:	19 82       	std	Y+1, r1	; 0x01
+ 380:	8d e0       	ldi	r24, 0x0D	; 13
+ 382:	90 e0       	ldi	r25, 0x00	; 0
+ 384:	9c 83       	std	Y+4, r25	; 0x04
+ 386:	8b 83       	std	Y+3, r24	; 0x03
+ 388:	10 92 09 01 	sts	0x0109, r1	; 0x800109 <HallEffect>
+ 38c:	f8 94       	cli
+ 38e:	8f ef       	ldi	r24, 0xFF	; 255
+ 390:	81 b9       	out	0x01, r24	; 1
+ 392:	87 b9       	out	0x07, r24	; 7
+ 394:	1d b8       	out	0x0d, r1	; 13
+ 396:	10 ba       	out	0x10, r1	; 16
+ 398:	e1 e8       	ldi	r30, 0x81	; 129
+ 39a:	f0 e0       	ldi	r31, 0x00	; 0
+ 39c:	80 81       	ld	r24, Z
+ 39e:	81 60       	ori	r24, 0x01	; 1
+ 3a0:	80 83       	st	Z, r24
+ 3a2:	be 01       	movw	r22, r28
+ 3a4:	6d 5f       	subi	r22, 0xFD	; 253
+ 3a6:	7f 4f       	sbci	r23, 0xFF	; 255
+ 3a8:	ce 01       	movw	r24, r28
+ 3aa:	01 96       	adiw	r24, 0x01	; 1
+ 3ac:	ad df       	rcall	.-166    	; 0x308 <stepperHome>
+ 3ae:	88 ee       	ldi	r24, 0xE8	; 232
+ 3b0:	93 e0       	ldi	r25, 0x03	; 3
+ 3b2:	90 de       	rcall	.-736    	; 0xd4 <mTimer>
+ 3b4:	80 ec       	ldi	r24, 0xC0	; 192
+ 3b6:	88 b9       	out	0x08, r24	; 8
+ 3b8:	88 ee       	ldi	r24, 0xE8	; 232
+ 3ba:	93 e0       	ldi	r25, 0x03	; 3
+ 3bc:	8b de       	rcall	.-746    	; 0xd4 <mTimer>
+ 3be:	8b 81       	ldd	r24, Y+3	; 0x03
+ 3c0:	88 b9       	out	0x08, r24	; 8
+ 3c2:	88 ee       	ldi	r24, 0xE8	; 232
+ 3c4:	93 e0       	ldi	r25, 0x03	; 3
+ 3c6:	86 de       	rcall	.-756    	; 0xd4 <mTimer>
+ 3c8:	10 92 09 01 	sts	0x0109, r1	; 0x800109 <HallEffect>
+ 3cc:	ee 24       	eor	r14, r14
+ 3ce:	e3 94       	inc	r14
+ 3d0:	f1 2c       	mov	r15, r1
+ 3d2:	00 e0       	ldi	r16, 0x00	; 0
+ 3d4:	10 e0       	ldi	r17, 0x00	; 0
+ 3d6:	c7 01       	movw	r24, r14
+ 3d8:	00 2e       	mov	r0, r16
+ 3da:	02 c0       	rjmp	.+4      	; 0x3e0 <main+0x70>
+ 3dc:	88 0f       	add	r24, r24
+ 3de:	99 1f       	adc	r25, r25
+ 3e0:	0a 94       	dec	r0
+ 3e2:	e2 f7       	brpl	.-8      	; 0x3dc <main+0x6c>
+ 3e4:	88 b9       	out	0x08, r24	; 8
+ 3e6:	88 ec       	ldi	r24, 0xC8	; 200
+ 3e8:	90 e0       	ldi	r25, 0x00	; 0
+ 3ea:	74 de       	rcall	.-792    	; 0xd4 <mTimer>
+ 3ec:	0f 5f       	subi	r16, 0xFF	; 255
+ 3ee:	1f 4f       	sbci	r17, 0xFF	; 255
+ 3f0:	08 30       	cpi	r16, 0x08	; 8
+ 3f2:	11 05       	cpc	r17, r1
+ 3f4:	81 f7       	brne	.-32     	; 0x3d6 <main+0x66>
+ 3f6:	06 e0       	ldi	r16, 0x06	; 6
+ 3f8:	10 e0       	ldi	r17, 0x00	; 0
+ 3fa:	c7 01       	movw	r24, r14
+ 3fc:	00 2e       	mov	r0, r16
+ 3fe:	02 c0       	rjmp	.+4      	; 0x404 <__LOCK_REGION_LENGTH__+0x4>
+ 400:	88 0f       	add	r24, r24
+ 402:	99 1f       	adc	r25, r25
+ 404:	0a 94       	dec	r0
+ 406:	e2 f7       	brpl	.-8      	; 0x400 <__LOCK_REGION_LENGTH__>
+ 408:	88 b9       	out	0x08, r24	; 8
+ 40a:	88 ec       	ldi	r24, 0xC8	; 200
+ 40c:	90 e0       	ldi	r25, 0x00	; 0
+ 40e:	62 de       	rcall	.-828    	; 0xd4 <mTimer>
+ 410:	01 50       	subi	r16, 0x01	; 1
+ 412:	11 09       	sbc	r17, r1
+ 414:	90 f7       	brcc	.-28     	; 0x3fa <main+0x8a>
+ 416:	ae 01       	movw	r20, r28
+ 418:	4d 5f       	subi	r20, 0xFD	; 253
+ 41a:	5f 4f       	sbci	r21, 0xFF	; 255
+ 41c:	be 01       	movw	r22, r28
+ 41e:	6f 5f       	subi	r22, 0xFF	; 255
+ 420:	7f 4f       	sbci	r23, 0xFF	; 255
+ 422:	81 e1       	ldi	r24, 0x11	; 17
+ 424:	90 e0       	ldi	r25, 0x00	; 0
+ 426:	7b de       	rcall	.-778    	; 0x11e <stepperControl>
+ 428:	8c ed       	ldi	r24, 0xDC	; 220
+ 42a:	95 e0       	ldi	r25, 0x05	; 5
+ 42c:	53 de       	rcall	.-858    	; 0xd4 <mTimer>
+ 42e:	ae 01       	movw	r20, r28
+ 430:	4d 5f       	subi	r20, 0xFD	; 253
+ 432:	5f 4f       	sbci	r21, 0xFF	; 255
+ 434:	be 01       	movw	r22, r28
+ 436:	6f 5f       	subi	r22, 0xFF	; 255
+ 438:	7f 4f       	sbci	r23, 0xFF	; 255
+ 43a:	81 e2       	ldi	r24, 0x21	; 33
+ 43c:	90 e0       	ldi	r25, 0x00	; 0
+ 43e:	6f de       	rcall	.-802    	; 0x11e <stepperControl>
+ 440:	8c ed       	ldi	r24, 0xDC	; 220
+ 442:	95 e0       	ldi	r25, 0x05	; 5
+ 444:	47 de       	rcall	.-882    	; 0xd4 <mTimer>
+ 446:	ae 01       	movw	r20, r28
+ 448:	4d 5f       	subi	r20, 0xFD	; 253
+ 44a:	5f 4f       	sbci	r21, 0xFF	; 255
+ 44c:	be 01       	movw	r22, r28
+ 44e:	6f 5f       	subi	r22, 0xFF	; 255
+ 450:	7f 4f       	sbci	r23, 0xFF	; 255
+ 452:	84 e6       	ldi	r24, 0x64	; 100
+ 454:	90 e0       	ldi	r25, 0x00	; 0
+ 456:	63 de       	rcall	.-826    	; 0x11e <stepperControl>
+ 458:	8c ed       	ldi	r24, 0xDC	; 220
+ 45a:	95 e0       	ldi	r25, 0x05	; 5
+ 45c:	3b de       	rcall	.-906    	; 0xd4 <mTimer>
+ 45e:	ae 01       	movw	r20, r28
+ 460:	4d 5f       	subi	r20, 0xFD	; 253
+ 462:	5f 4f       	sbci	r21, 0xFF	; 255
+ 464:	be 01       	movw	r22, r28
+ 466:	6f 5f       	subi	r22, 0xFF	; 255
+ 468:	7f 4f       	sbci	r23, 0xFF	; 255
+ 46a:	8c e9       	ldi	r24, 0x9C	; 156
+ 46c:	9f ef       	ldi	r25, 0xFF	; 255
+ 46e:	57 de       	rcall	.-850    	; 0x11e <stepperControl>
+ 470:	8c ed       	ldi	r24, 0xDC	; 220
+ 472:	95 e0       	ldi	r25, 0x05	; 5
+ 474:	2f de       	rcall	.-930    	; 0xd4 <mTimer>
+ 476:	ae 01       	movw	r20, r28
+ 478:	4d 5f       	subi	r20, 0xFD	; 253
+ 47a:	5f 4f       	sbci	r21, 0xFF	; 255
+ 47c:	be 01       	movw	r22, r28
+ 47e:	6f 5f       	subi	r22, 0xFF	; 255
+ 480:	7f 4f       	sbci	r23, 0xFF	; 255
+ 482:	8f ed       	ldi	r24, 0xDF	; 223
+ 484:	9f ef       	ldi	r25, 0xFF	; 255
+ 486:	4b de       	rcall	.-874    	; 0x11e <stepperControl>
+ 488:	8c ed       	ldi	r24, 0xDC	; 220
+ 48a:	95 e0       	ldi	r25, 0x05	; 5
+ 48c:	23 de       	rcall	.-954    	; 0xd4 <mTimer>
+ 48e:	ae 01       	movw	r20, r28
+ 490:	4d 5f       	subi	r20, 0xFD	; 253
+ 492:	5f 4f       	sbci	r21, 0xFF	; 255
+ 494:	be 01       	movw	r22, r28
+ 496:	6f 5f       	subi	r22, 0xFF	; 255
+ 498:	7f 4f       	sbci	r23, 0xFF	; 255
+ 49a:	8f ee       	ldi	r24, 0xEF	; 239
+ 49c:	9f ef       	ldi	r25, 0xFF	; 255
+ 49e:	3f de       	rcall	.-898    	; 0x11e <stepperControl>
+ 4a0:	8c ed       	ldi	r24, 0xDC	; 220
+ 4a2:	95 e0       	ldi	r25, 0x05	; 5
+ 4a4:	17 de       	rcall	.-978    	; 0xd4 <mTimer>
+ 4a6:	95 cf       	rjmp	.-214    	; 0x3d2 <main+0x62>
 
-000004aa <__vector_7>:
+000004a8 <__vector_7>:
 ISR(INT2_vect){
 	//when there is a rising edge on PD2, ADC is triggered which is currently ADC1 (PF1)
 	ADCSRA |= _BV(ADSC);
 }
 */
 ISR(INT6_vect){ //Active low for hall effect sensor on PE4
- 4aa:	1f 92       	push	r1
- 4ac:	0f 92       	push	r0
- 4ae:	0f b6       	in	r0, 0x3f	; 63
- 4b0:	0f 92       	push	r0
- 4b2:	11 24       	eor	r1, r1
- 4b4:	8f 93       	push	r24
+ 4a8:	1f 92       	push	r1
+ 4aa:	0f 92       	push	r0
+ 4ac:	0f b6       	in	r0, 0x3f	; 63
+ 4ae:	0f 92       	push	r0
+ 4b0:	11 24       	eor	r1, r1
+ 4b2:	8f 93       	push	r24
 	HallEffect=0x01;
- 4b6:	81 e0       	ldi	r24, 0x01	; 1
- 4b8:	80 93 09 01 	sts	0x0109, r24	; 0x800109 <HallEffect>
+ 4b4:	81 e0       	ldi	r24, 0x01	; 1
+ 4b6:	80 93 09 01 	sts	0x0109, r24	; 0x800109 <HallEffect>
 	PORTC=0b01010101;
- 4bc:	85 e5       	ldi	r24, 0x55	; 85
- 4be:	88 b9       	out	0x08, r24	; 8
+ 4ba:	85 e5       	ldi	r24, 0x55	; 85
+ 4bc:	88 b9       	out	0x08, r24	; 8
 }
- 4c0:	8f 91       	pop	r24
- 4c2:	0f 90       	pop	r0
- 4c4:	0f be       	out	0x3f, r0	; 63
- 4c6:	0f 90       	pop	r0
- 4c8:	1f 90       	pop	r1
- 4ca:	18 95       	reti
+ 4be:	8f 91       	pop	r24
+ 4c0:	0f 90       	pop	r0
+ 4c2:	0f be       	out	0x3f, r0	; 63
+ 4c4:	0f 90       	pop	r0
+ 4c6:	1f 90       	pop	r1
+ 4c8:	18 95       	reti
 
-000004cc <__divmodhi4>:
- 4cc:	97 fb       	bst	r25, 7
- 4ce:	07 2e       	mov	r0, r23
- 4d0:	16 f4       	brtc	.+4      	; 0x4d6 <__divmodhi4+0xa>
- 4d2:	00 94       	com	r0
- 4d4:	06 d0       	rcall	.+12     	; 0x4e2 <__divmodhi4_neg1>
- 4d6:	77 fd       	sbrc	r23, 7
- 4d8:	08 d0       	rcall	.+16     	; 0x4ea <__divmodhi4_neg2>
- 4da:	0b d0       	rcall	.+22     	; 0x4f2 <__udivmodhi4>
- 4dc:	07 fc       	sbrc	r0, 7
- 4de:	05 d0       	rcall	.+10     	; 0x4ea <__divmodhi4_neg2>
- 4e0:	3e f4       	brtc	.+14     	; 0x4f0 <__divmodhi4_exit>
+000004ca <__divmodhi4>:
+ 4ca:	97 fb       	bst	r25, 7
+ 4cc:	07 2e       	mov	r0, r23
+ 4ce:	16 f4       	brtc	.+4      	; 0x4d4 <__divmodhi4+0xa>
+ 4d0:	00 94       	com	r0
+ 4d2:	06 d0       	rcall	.+12     	; 0x4e0 <__divmodhi4_neg1>
+ 4d4:	77 fd       	sbrc	r23, 7
+ 4d6:	08 d0       	rcall	.+16     	; 0x4e8 <__divmodhi4_neg2>
+ 4d8:	0b d0       	rcall	.+22     	; 0x4f0 <__udivmodhi4>
+ 4da:	07 fc       	sbrc	r0, 7
+ 4dc:	05 d0       	rcall	.+10     	; 0x4e8 <__divmodhi4_neg2>
+ 4de:	3e f4       	brtc	.+14     	; 0x4ee <__divmodhi4_exit>
 
-000004e2 <__divmodhi4_neg1>:
- 4e2:	90 95       	com	r25
- 4e4:	81 95       	neg	r24
- 4e6:	9f 4f       	sbci	r25, 0xFF	; 255
- 4e8:	08 95       	ret
+000004e0 <__divmodhi4_neg1>:
+ 4e0:	90 95       	com	r25
+ 4e2:	81 95       	neg	r24
+ 4e4:	9f 4f       	sbci	r25, 0xFF	; 255
+ 4e6:	08 95       	ret
 
-000004ea <__divmodhi4_neg2>:
- 4ea:	70 95       	com	r23
- 4ec:	61 95       	neg	r22
- 4ee:	7f 4f       	sbci	r23, 0xFF	; 255
+000004e8 <__divmodhi4_neg2>:
+ 4e8:	70 95       	com	r23
+ 4ea:	61 95       	neg	r22
+ 4ec:	7f 4f       	sbci	r23, 0xFF	; 255
 
-000004f0 <__divmodhi4_exit>:
- 4f0:	08 95       	ret
+000004ee <__divmodhi4_exit>:
+ 4ee:	08 95       	ret
 
-000004f2 <__udivmodhi4>:
- 4f2:	aa 1b       	sub	r26, r26
- 4f4:	bb 1b       	sub	r27, r27
- 4f6:	51 e1       	ldi	r21, 0x11	; 17
- 4f8:	07 c0       	rjmp	.+14     	; 0x508 <__udivmodhi4_ep>
+000004f0 <__udivmodhi4>:
+ 4f0:	aa 1b       	sub	r26, r26
+ 4f2:	bb 1b       	sub	r27, r27
+ 4f4:	51 e1       	ldi	r21, 0x11	; 17
+ 4f6:	07 c0       	rjmp	.+14     	; 0x506 <__udivmodhi4_ep>
 
-000004fa <__udivmodhi4_loop>:
- 4fa:	aa 1f       	adc	r26, r26
- 4fc:	bb 1f       	adc	r27, r27
- 4fe:	a6 17       	cp	r26, r22
- 500:	b7 07       	cpc	r27, r23
- 502:	10 f0       	brcs	.+4      	; 0x508 <__udivmodhi4_ep>
- 504:	a6 1b       	sub	r26, r22
- 506:	b7 0b       	sbc	r27, r23
+000004f8 <__udivmodhi4_loop>:
+ 4f8:	aa 1f       	adc	r26, r26
+ 4fa:	bb 1f       	adc	r27, r27
+ 4fc:	a6 17       	cp	r26, r22
+ 4fe:	b7 07       	cpc	r27, r23
+ 500:	10 f0       	brcs	.+4      	; 0x506 <__udivmodhi4_ep>
+ 502:	a6 1b       	sub	r26, r22
+ 504:	b7 0b       	sbc	r27, r23
 
-00000508 <__udivmodhi4_ep>:
- 508:	88 1f       	adc	r24, r24
- 50a:	99 1f       	adc	r25, r25
- 50c:	5a 95       	dec	r21
- 50e:	a9 f7       	brne	.-22     	; 0x4fa <__udivmodhi4_loop>
- 510:	80 95       	com	r24
- 512:	90 95       	com	r25
- 514:	bc 01       	movw	r22, r24
- 516:	cd 01       	movw	r24, r26
- 518:	08 95       	ret
+00000506 <__udivmodhi4_ep>:
+ 506:	88 1f       	adc	r24, r24
+ 508:	99 1f       	adc	r25, r25
+ 50a:	5a 95       	dec	r21
+ 50c:	a9 f7       	brne	.-22     	; 0x4f8 <__udivmodhi4_loop>
+ 50e:	80 95       	com	r24
+ 510:	90 95       	com	r25
+ 512:	bc 01       	movw	r22, r24
+ 514:	cd 01       	movw	r24, r26
+ 516:	08 95       	ret
 
-0000051a <_exit>:
- 51a:	f8 94       	cli
+00000518 <_exit>:
+ 518:	f8 94       	cli
 
-0000051c <__stop_program>:
- 51c:	ff cf       	rjmp	.-2      	; 0x51c <__stop_program>
+0000051a <__stop_program>:
+ 51a:	ff cf       	rjmp	.-2      	; 0x51a <__stop_program>
