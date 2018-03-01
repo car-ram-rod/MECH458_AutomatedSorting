@@ -38,7 +38,7 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 volatile unsigned char ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
 volatile unsigned char HallEffect; //becomes set during stepper homing to know position
-unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00001101};
+unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00010101};
 
 /* Main Routine */
 int main(int argc, char *argv[]){
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0b00001101;
 	//uint8_t motorDirection = 0b00;
-	uint8_t LEDisplay = 0x00;
+	//uint8_t LEDisplay = 0x00;
 
 	/*initializations*/
 	cli(); //disable interrupts
@@ -188,7 +188,7 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 	uint8_t dutyCycle = 0;
 	if(((PINB & 0b00001100) >> 2) != d){ //if current direction doesn't match new direction
 		PORTB &= 0b11110000; //apply Vcc Brake
-		PORTB |= ((~d & 0b11) << 2) //start motor in specified direction
+		PORTB |= ((~d & 0b11) << 2); //start motor in specified direction
 	}
 	dutyCycle = s*2.55;
 	OCR0A = dutyCycle;//set duty cycle
