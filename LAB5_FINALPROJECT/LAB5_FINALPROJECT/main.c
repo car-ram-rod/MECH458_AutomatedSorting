@@ -198,8 +198,11 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 /*Button interrupt for emergency: shut-off dc motor, disable stepper, shut off, ensure nothing can be turned on*/
 
 ISR(INT0_vect){ // on PD0; KILL SWITCH
-	PORTB &= 0b11110011; //stop motor
-	
+	PORTB &= 0b11110011; //stop motor	
+}
+
+ISR(INT1_vect){ // on PD0; KILL SWITCH
+	PORTB &= 0b11110011; //stop motor	
 }
 
 /*sensor 3: 2nt Optical Inductive, Active HIGH starts AD conversion*/
