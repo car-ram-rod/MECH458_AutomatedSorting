@@ -186,9 +186,11 @@ void setupADC(void){
 }
 void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted bits
 	uint8_t dutyCycle = 0;
-	if(((PINB & 0b00001100) >> 2) != d){ //if current direction doesn't match new direction
+	static uint8_t oldDirection;
+	if((oldDirection & 0b00000011) != d){ //if current direction doesn't match new direction
 		PORTB &= 0b11110000; //apply Vcc Brake
-		PORTB |= ((~d & 0b11) << 2) //start motor in specified direction
+		PORTB |= ((~d & 0b11) << 2); //start motor in specified direction
+		oldDirection=d;
 	}
 	dutyCycle = s*2.55;
 	OCR0A = dutyCycle;//set duty cycle
