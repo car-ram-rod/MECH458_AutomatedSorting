@@ -41,18 +41,17 @@ volatile unsigned char HallEffect; //becomes set during stepper homing to know p
 volatile unsigned char ADCObjCntSense; //keeps a total count of objects between 1st and 2nd optical sensors
 volatile unsigned char ADCObjCntConveyor; //keeps a total count of objects between 1st and 3rd optical sensors (i.e. objects on conveyor)
 volatile unsigned char ADCExitFlag; //object is at end of conveyor
+volatile unsigned char inductiveFlag; //an inductive flag is picked up
 unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00010101};
 
 /* Main Routine */
 int main(int argc, char *argv[]){
 	/*User Variables*/
-	//uint8_t stepperSpeed = 0x00;
-	//uint8_t stepperDirection = 0x00; //greater than 0 => clockwise (CW); 0 => counter-clockwise (CCW)
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0b00001101;
 	uint8_t oldADCResult = 0x00;
-	//uint8_t motorDirection = 0b00;
-	//uint8_t LEDisplay = 0x00;
+	int objectsMeasured = 0x00; //count of objects that have had their reflectivities quantified
+	int objectsSorted = 0x00; //count of objects that have been sorted
 
 	/*initializations*/
 	cli(); //disable interrupts
@@ -83,31 +82,30 @@ int main(int argc, char *argv[]){
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//forwards at 30%
 	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
 	while(1){
-		/*if ((ADCResultFlag!=0) && (ADCResult>oldADCResult)){
-			oldADCResult=ADCResult;
-			PORTC=oldADCResult;
-			ADCResultFlag=0x00;
-			ADCSRA |= _BV(ADSC);
-		}*/
-
-		if(ADCResultFlag){
-			if(ADCResult>oldADCResult){ //keep increasing
-				oldADCResult=ADCResult;
-			}
-			if(ADCResult<0x02){ //minimal to no reflection
-				
-			}
-			ADCResultFlag=0;
-		}
-		if(ADCObjCntSense){
+		if(ADCObjCntSense>0){
 			//start ADC conversions (continuously based on timer)
 			//let reflectivity's build up to a maximum number
 		} else {
 			//shut off ADC conversions
 		}
+		if(ADCResultFlag){
+			if(ADCResult>oldADCResult){ //reflectivity is increasing still
+				oldADCResult=ADCResult;
+			}else if((ADCResult<0x04) && (ADCResult<oldADCResult)){ //minimal to no reflection AND reflectivities have been reducing
+				//create new link
+				//set link ID equal to objectsMeasured
+				//set link quantity equal to oldADCResult
+				oldADCResult=0x00;//reset oldADCResult to 0 for the next objects reflectivites to be measured
+				//set new link in relation to inductive sensing?
+			}
+			ADCResultFlag=0;
+		}
 		if(ADCExitFlag){
 			//
 			ADCExitFlag=0;
+		}
+		if(inductiveFlag){
+			
 		}
 	}
 	return (0); //This line returns a 0 value to the calling program
@@ -236,7 +234,7 @@ ISR(INT2_vect){ // on PD2; active low
 }
 /*sensor 4: Inductive sensor*/
 ISR(INT3_vect){ //on PD3; active low
-	
+	inductiveFlag=1;
 }
 /*sensor 5: 3rd Optical-Near exit of conveyor*/
 ISR(INT4_vect){ //on PE4; active low

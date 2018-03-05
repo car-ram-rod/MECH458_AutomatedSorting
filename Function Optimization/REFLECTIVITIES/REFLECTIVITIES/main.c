@@ -64,6 +64,7 @@ int main(void){
 		if (ADC_RESET){
 			oldADCResult=0x00;
 			ADC_RESET=0x00;
+			PORTC=0x00;
 		}
 	}
 	return (0); //This line returns a 0 value to the calling program
