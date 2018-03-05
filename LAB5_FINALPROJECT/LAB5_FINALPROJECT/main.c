@@ -38,7 +38,7 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 volatile unsigned char ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
 volatile unsigned char HallEffect; //becomes set during stepper homing to know position
-unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00001101};
+unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00010101};
 
 /* Main Routine */
 int main(int argc, char *argv[]){
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0b00001101;
 	//uint8_t motorDirection = 0b00;
-	uint8_t LEDisplay = 0x00;
+	//uint8_t LEDisplay = 0x00;
 
 	/*initializations*/
 	cli(); //disable interrupts
@@ -200,8 +200,11 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 /*Button interrupt for emergency: shut-off dc motor, disable stepper, shut off, ensure nothing can be turned on*/
 
 ISR(INT0_vect){ // on PD0; KILL SWITCH
-	PORTB &= 0b11110011; //stop motor
-	
+	PORTB &= 0b11110011; //stop motor	
+}
+
+ISR(INT1_vect){ // on PD0; KILL SWITCH
+	PORTB &= 0b11110011; //stop motor	
 }
 
 /*sensor 3: 2nt Optical Inductive, Active HIGH starts AD conversion*/
