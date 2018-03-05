@@ -67,10 +67,7 @@ int main(int argc, char *argv[]){
 	DDRF = 0x00; /*PF1=ADC1 pin*/
 
 	//sei(); //enable interrupts; currently breaks Timer 1...
-	
-	TCCR1B |= _BV(CS10);//Sets timer 1 to run at CPU clock, disable all function and use as pure timer
-	//ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
-	
+	initTimer1();
 	/*code begins*/
 	stepperHome(&stepperPosition,&stepperIteration);
 	mTimer(1000);
@@ -116,8 +113,8 @@ int main(int argc, char *argv[]){
 void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
-	uint8_t maxDelay = 40; //20ms corresponds to 50 steps per second
-	uint8_t minDelay = 32; //5ms corresponds to 200 steps per second; or 1 revolution per second
+	uint8_t maxDelay = 20; //20ms corresponds to 50 steps per second
+	uint8_t minDelay = 10; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
 	uint8_t delay = maxDelay;
 	uint8_t offset = 0;
@@ -144,7 +141,7 @@ void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	
 	for(i=0;i<absSteps;i++){
 		//ramp up
-		if((absSteps-i) > differential){
+		if((absSteps-i-1) > differential){ //the "added" negative one causes it to slow down one step early
 			if(delay>minDelay)delay -= 1;
 			else delay = minDelay;
 		} else { //ramp down if the amount of steps left
