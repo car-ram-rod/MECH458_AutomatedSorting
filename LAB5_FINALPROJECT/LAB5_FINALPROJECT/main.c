@@ -1,7 +1,7 @@
 /*
 ########################################################################
 # MILESTONE : Final Project
-# PROGRAM : 5: Automated Sorting
+# PROGRAM : 6: Automated Sorting
 # PROJECT : Lab5:
 # GROUP : X
 # NAME 1 : Owen, Anderberg, V00862140
@@ -38,6 +38,9 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 volatile unsigned char ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
 volatile unsigned char HallEffect; //becomes set during stepper homing to know position
+volatile unsigned char ADCObjCntSense; //keeps a total count of objects between 1st and 2nd optical sensors
+volatile unsigned char ADCObjCntConveyor; //keeps a total count of objects between 1st and 3rd optical sensors (i.e. objects on conveyor)
+volatile unsigned char ADCExitFlag; //object is at end of conveyor
 unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00010101};
 
 /* Main Routine */
@@ -47,6 +50,7 @@ int main(int argc, char *argv[]){
 	//uint8_t stepperDirection = 0x00; //greater than 0 => clockwise (CW); 0 => counter-clockwise (CCW)
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0b00001101;
+	uint8_t oldADCResult = 0x00;
 	//uint8_t motorDirection = 0b00;
 	//uint8_t LEDisplay = 0x00;
 
@@ -62,31 +66,49 @@ int main(int argc, char *argv[]){
 	initTimer1();
 	/*Port I/O Definitions*/
 	DDRA = 0xFF; /* Sets all pins on Port A to output: stepper motor control */
-	/*stepper motor connections to MCU: PA5:0 = EN0, L1, L2, EN1, L3, L4*/
+		/*stepper motor connections to MCU: PA5:0 = EN0, L1, L2, EN1, L3, L4*/
 	DDRB = 0xFF; /*controls dc motor: PB7=PWM signal PB3:0={INA,INB,ENA,ENB}*/
 	DDRC = 0xFF; //LEDs Debugging
 	DDRD = 0xF0; //upper nibble for on-board bi-color LEDs, interrupts on lower nibble	PORTD3:0=INT3:0
 	DDRE = 0x00; /*PE4=HallEffect for stepper*/
-	DDRF = 0x00; /*PF1=ADC1 pin*/
-
-	
+	DDRF = 0x00; /*PF1=ADC1 pin*/	
 	sei(); //enable interrupts
-	TCCR1B |= _BV(CS10);//Sets timer 1 to run at CPU clock, disable all function and use as pure timer
-	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
-
 	// PORTB &= 0b0000; //start motor in specified direction
 	//PORTB |=0b1000;
 	HallEffect=0x00; //set HallEffect equal to zero so while loop is continuous until break out
 	stepperHome(&stepperPosition,&stepperIteration);
-	HallEffect=0x00;
+	//shut off hall effect sensor interrupt
+	ADCObjCntConveyor=0;
+	ADCObjCntSense=0;
+	motorControl(CONVEYOR_SPEED,DC_FORWARD);//forwards at 30%
+	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
 	while(1){
-		/*DC Motor Conveyor Test*/
-		//motorControl(CONVEYOR_SPEED,DC_FORWARD);//forwards at 30%
-		/*stepper function testing*/
-		stepperControl(50,&stepperPosition,&stepperIteration); /*stepper function testing*/
-		mTimer(1000);
+		/*if ((ADCResultFlag!=0) && (ADCResult>oldADCResult)){
+			oldADCResult=ADCResult;
+			PORTC=oldADCResult;
+			ADCResultFlag=0x00;
+			ADCSRA |= _BV(ADSC);
+		}*/
 
-		
+		if(ADCResultFlag){
+			if(ADCResult>oldADCResult){ //keep increasing
+				oldADCResult=ADCResult;
+			}
+			if(ADCResult<0x02){ //minimal to no reflection
+				
+			}
+			ADCResultFlag=0;
+		}
+		if(ADCObjCntSense){
+			//start ADC conversions (continuously based on timer)
+			//let reflectivity's build up to a maximum number
+		} else {
+			//shut off ADC conversions
+		}
+		if(ADCExitFlag){
+			//
+			ADCExitFlag=0;
+		}
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
@@ -200,29 +222,34 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 /*Button interrupt for emergency: shut-off dc motor, disable stepper, shut off, ensure nothing can be turned on*/
 
 ISR(INT0_vect){ // on PD0; KILL SWITCH
-	PORTB &= 0b11110011; //stop motor	
+	PORTB &= 0b11110000; //stop motor by applying Vcc break
 }
-
-ISR(INT1_vect){ // on PD0; KILL SWITCH
-	PORTB &= 0b11110011; //stop motor	
+/*sensor 1: 1st Optical-Near Reflective sensor*/
+ISR(INT1_vect){ // on PD1; active high
+	ADCSRA |= _BV(ADSC); //begin ADC conversions
+	ADCObjCntSense+=1;
+	ADCObjCntConveyor+=1;
 }
-
-/*sensor 3: 2nt Optical Inductive, Active HIGH starts AD conversion*/
-ISR(INT2_vect){
-	//when there is a rising edge on PD2, ADC is triggered which is currently ADC1 (PF1)
-	ADCSRA |= _BV(ADSC);
+/*sensor 3: 2nd Optical-Near Inductive sensor*/
+ISR(INT2_vect){ // on PD2; active low
+	ADCObjCntSense-=1;
 }
-
+/*sensor 4: Inductive sensor*/
+ISR(INT3_vect){ //on PD3; active low
+	
+}
+/*sensor 5: 3rd Optical-Near exit of conveyor*/
+ISR(INT4_vect){ //on PE4; active low
+	ADCExitFlag=0x01;
+	ADCObjCntConveyor-=1;
+}
+/*sensor 6: Hall Effect sensor; used for homing stepper*/
 ISR(INT6_vect){ //Active low for hall effect sensor on PE6
-	//when there is a rising edge on PD2, ADC is triggered which is currently ADC1 (PF1)
 	HallEffect=0x01;
 }
 
 /*ADC ISR: triggered when ADC is completed*/
 ISR(ADC_vect){
-	/*ADLAR not set=0*/
-	//ADCResult = ADCL;
-	//ADCResult += ADCH << 8;
 	/*ADLAR set=1; reduced resolution (lose two least significant bits), but more efficient*/
 	ADCResult = ADCH;
 	ADCResultFlag = 1;
