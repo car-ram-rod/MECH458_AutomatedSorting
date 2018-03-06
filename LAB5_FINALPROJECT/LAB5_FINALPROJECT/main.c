@@ -76,10 +76,13 @@ int main(int argc, char *argv[]){
 	//PORTB |=0b1000;
 	HallEffect=0x00; //set HallEffect equal to zero so while loop is continuous until break out
 	stepperHome(&stepperPosition,&stepperIteration);
-	//shut off hall effect sensor interrupt
+	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6) 
+	/*initialize flags and counters*/
 	ADCObjCntConveyor=0;
 	ADCObjCntSense=0;
-	motorControl(CONVEYOR_SPEED,DC_FORWARD);//forwards at 30%
+	inductiveFlag=0;
+	
+	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
 	while(1){
 		if(ADCObjCntSense>0){
@@ -194,7 +197,8 @@ void setupPWM(int motorDuty){
 }
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
-	EIMSK |= (_BV(INT6) | _BV(INT2)) | (_BV(INT0)); //enable INT6, INT2 and INT0
+	EIMSK |=0b01011111; //initialize INT6,4:0
+	//EIMSK |= (_BV(INT6) | _BV(INT4)) | _BV(INT3)) | _BV(INT2))  | _BV(INT1)) | (_BV(INT0)); //enable INT6, INT4, INT3, INT2, INT1 and INT0
 	EICRA |= _BV(ISC21) | _BV(ISC20) | _BV(ISC01) | _BV(ISC00); //rising edge interrupt; EICRA determines INT3:0
 	EICRB |= _BV(ISC61); //falling edge for INT6 Hall Effect; EICRB determines INT7:4
 }
