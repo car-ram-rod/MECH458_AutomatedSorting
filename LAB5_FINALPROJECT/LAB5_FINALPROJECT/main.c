@@ -35,31 +35,31 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define CONVEYOR_SPEED 30 //50 is maximum for sustainability
 
 /*Global Variables*/
-volatile unsigned char ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
-volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
-volatile unsigned char HallEffect; //becomes set during stepper homing to know position
-volatile unsigned char ADCObjCntSense; //keeps a total count of objects between 1st and 2nd optical sensors
-volatile unsigned char ADCObjCntConveyor; //keeps a total count of objects between 1st and 3rd optical sensors (i.e. objects on conveyor)
-volatile unsigned char ADCExitFlag; //object is at end of conveyor
-volatile unsigned char inductiveFlag; //an inductive flag is picked up
-unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00010101};
+volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
+volatile unsigned int ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
+volatile unsigned int HallEffect; //becomes set during stepper homing to know position
+volatile unsigned int opt1Flag; //set when 1st optical sensor is triggered (OI sensor)
+volatile unsigned int opt2Flag; //set when 2nd optical sensor is triggered (OR sensor)
+volatile unsigned int optExitFlag; //object is at end of conveyor
+volatile unsigned int inductiveFlag; //an inductive flag is picked up
+unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
 
 /* Main Routine */
 int main(int argc, char *argv[]){
 	/*User Variables*/
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
-	int stepperIteration = 0b00001101;
+	int stepperIteration = 0x00;
 	uint8_t oldADCResult = 0x00;
 	int objectsMeasured = 0x00; //count of objects that have had their reflectivities quantified
 	int objectsSorted = 0x00; //count of objects that have been sorted
-
+	int senseObjCnt = 0x00; //keeps a total count of objects between 1st and 2nd optical sensors 
+	int measuredObjCnt = 0x00; //keeps a count of objects that have been measured, but not sorted
+	int unsortedObjCnt = 0x00; //keeps a total count of objects between 1st and 3rd optical sensors (i.e. objects on conveyor)
 	/*initializations*/
 	cli(); //disable interrupts
-	/*initialize clock to 8MHz*/
-	CLKPR = _BV(CLKPCE);
+	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
 	CLKPR = 0;
-	
-	setupPWM(CONVEYOR_SPEED); //DC Motor PWM;
+	setupPWM(CONVEYOR_SPEED); //DC Motor PWM setup;
 	setupISR();
 	setupADC();
 	initTimer1();
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]){
 	//PORTB |=0b1000;
 	HallEffect=0x00; //set HallEffect equal to zero so while loop is continuous until break out
 	stepperHome(&stepperPosition,&stepperIteration);
-	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6) 
+	
 	/*initialize flags and counters*/
 	ADCObjCntConveyor=0;
 	ADCObjCntSense=0;
@@ -85,31 +85,35 @@ int main(int argc, char *argv[]){
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
 	while(1){
-		if(ADCObjCntSense>0){
-			//start ADC conversions (continuously based on timer)
+		if(opt1Flag){
+			opt1Flag=0x00;
+			ADCSRA |= _BV(ADSC); //initialize the ADC
+			//start ADC conversions
 			//let reflectivity's build up to a maximum number
-		} else {
-			//shut off ADC conversions
-		}
+		} 
 		if(ADCResultFlag){
 			if(ADCResult>oldADCResult){ //reflectivity is increasing still
 				oldADCResult=ADCResult;
 			}else if((ADCResult<0x04) && (ADCResult<oldADCResult)){ //minimal to no reflection AND reflectivities have been reducing
-				//create new link
-				//set link ID equal to objectsMeasured
-				//set link quantity equal to oldADCResult
+				//value of oldADCResult is added to a temporary array
 				oldADCResult=0x00;//reset oldADCResult to 0 for the next objects reflectivites to be measured
 				//set new link in relation to inductive sensing?
 			}
 			ADCResultFlag=0;
 		}
-		if(ADCExitFlag){
-			//
-			ADCExitFlag=0;
+		if(opt2Flag){
+			opt2Flag=0x00;
+			if(inductiveFlag){ //object is metal: aluminum (light), steel (dark)
+				inductiveFlag=0x00;
+				//based on reflectivity, make an objective decision
+			} else { //object is plastic: white (light), black (dark)
+				//based on reflectivity, make an objective decision
+			}
 		}
-		if(inductiveFlag){
-			
+		if(optExitFlag){
+			optExitFlag=0x00;
 		}
+
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
@@ -186,9 +190,6 @@ void setupPWM(int motorDuty){
 	uint8_t dutyCycle = 0;
 	/*DC MOTOR PWM SETUP (runs conveyor)*/
 	TCCR0A |= _BV(WGM00) | _BV(WGM01) | _BV(COM0A1); /*set to Fast PWM; OCRx updated at TOP; TOV set on MAX; Clear OC0A on Compare Match, set OC0A at TOP*/
-	//TCCR0B &= 0b11110111;//WGM02 set to 0; (_BV(2) => 0x01 << 2)
-	//TIMSK0 |= _BV(1);//enable interrupt for execution upon compare match in Timer/Counter 0; UNNEEDED due to sei(); above
-	//TCCR0A &= 0b10111111;
 	TCCR0B |= _BV(CS01) | _BV(CS00);//Set clock pre-scalar (8MHz*1/64): 488Hz measured on PB7*
 	//TCCR0B &= 0b11111101;
 	dutyCycle = motorDuty*2.55;
@@ -197,16 +198,16 @@ void setupPWM(int motorDuty){
 }
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
+	//rising edge on INT2: EICRA |= _BV(ISC21) | _BV(ISC20);
+	//falling edge on INT2: EICRA |= _BV(ISC21);
 	EIMSK |=0b01011111; //initialize INT6,4:0
-	//EIMSK |= (_BV(INT6) | _BV(INT4)) | _BV(INT3)) | _BV(INT2))  | _BV(INT1)) | (_BV(INT0)); //enable INT6, INT4, INT3, INT2, INT1 and INT0
-	EICRA |= _BV(ISC21) | _BV(ISC20) | _BV(ISC01) | _BV(ISC00); //rising edge interrupt; EICRA determines INT3:0
-	EICRB |= _BV(ISC61); //falling edge for INT6 Hall Effect; EICRB determines INT7:4
+	EICRA |= 0b10111010; //rising edge on INT2; falling edge detection on INT0
+	EICRB |= 0b00100010; //active low for INT6 and INT4
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
-	ADMUX |= _BV(REFS0) | _BV(MUX0) | _BV(ADLAR); //AVcc reference (3.3V);read from ADC 1;output left-adjusted
+	ADMUX |= _BV(REFS0) | _BV(MUX0); //AVcc reference (3.3V);read from ADC 1;output left-adjusted
 	ADMUX &= 0b11100001; //reading from PF1 (ADC1); ADC0 works, but MCU has thermistor on pin...
-	//PORTF &= 0b11111110;
 }
 void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted bits
 	uint8_t dutyCycle = 0;
@@ -222,38 +223,34 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 
 /**********INTERRUPT SERVICE ROUTINES**********/
 /*Button interrupt for emergency: shut-off dc motor, disable stepper, shut off, ensure nothing can be turned on*/
-
-ISR(INT0_vect){ // on PD0; KILL SWITCH
+ISR(INT0_vect){ // on PD0; active low KILL SWITCH
 	PORTB &= 0b11110000; //stop motor by applying Vcc break
 }
-/*sensor 1: 1st Optical-Near Reflective sensor*/
-ISR(INT1_vect){ // on PD1; active high
-	ADCSRA |= _BV(ADSC); //begin ADC conversions
-	ADCObjCntSense+=1;
-	ADCObjCntConveyor+=1;
+/*sensor 1: OI: 1st Optical-Inductive-Near Reflective sensor*/
+ISR(INT1_vect){ // on PD1; active low
+	opt1Flag=0x01;
 }
-/*sensor 3: 2nd Optical-Near Inductive sensor*/
-ISR(INT2_vect){ // on PD2; active low
-	ADCObjCntSense-=1;
+/*sensor 3: OR: 2nd Optical-Reflective-Near Inductive sensor*/
+ISR(INT2_vect){ // on PD2; active high
+	opt2Flag=0x01;
 }
-/*sensor 4: Inductive sensor*/
+/*sensor 4: IN: Inductive sensor*/
 ISR(INT3_vect){ //on PD3; active low
-	inductiveFlag=1;
+	inductiveFlag=0x01;
 }
-/*sensor 5: 3rd Optical-Near exit of conveyor*/
+/*sensor 5: EX: 3rd Optical-Near exit of conveyor*/
 ISR(INT4_vect){ //on PE4; active low
-	ADCExitFlag=0x01;
-	ADCObjCntConveyor-=1;
+	optExitFlag=0x01;
 }
-/*sensor 6: Hall Effect sensor; used for homing stepper*/
+/*sensor 6: HE: Hall Effect sensor; used for homing stepper*/
 ISR(INT6_vect){ //Active low for hall effect sensor on PE6
 	HallEffect=0x01;
 }
 
 /*ADC ISR: triggered when ADC is completed*/
 ISR(ADC_vect){
-	/*ADLAR set=1; reduced resolution (lose two least significant bits), but more efficient*/
-	ADCResult = ADCH;
+	ADCResult = ADCL;
+	ADCResult += ADCH << 8;
 	ADCResultFlag = 1;
 }
 

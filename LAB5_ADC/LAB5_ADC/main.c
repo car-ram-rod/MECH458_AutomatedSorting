@@ -46,13 +46,13 @@ int main(void){
 	DDRF = 0x00; /*PF1=ADC1 pin*/
 	sei(); //enable all interrupts	
 	PORTB &= 0b11110000; //apply brake to Vcc
-	motorControl(CONVEYOR_SPEED,DC_FORWARD); //start conveyor towards stepper
+	//motorControl(CONVEYOR_SPEED,DC_FORWARD); //start conveyor towards stepper
 	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
     while (1){
 		if (ADCResultFlag){
 			PORTC=ADCResult;
 			ADCResultFlag=0x00;
-			//mTimer(10) //--ODA Edit;Does mTimer break with other interrupts engaged?
+			mTimer(10); //--ODA Edit;Does mTimer break with other interrupts engaged?
 		}		
     }
 	return (0); //This line returns a 0 value to the calling program
@@ -69,7 +69,8 @@ void setupPWM(int motorDuty){
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
 	EIMSK |= _BV(INT2); //enable INT2
-	EICRA |= _BV(ISC21) | _BV(ISC20); //rising edge interrupt; EICRA determines INT3:0
+	//EICRA |= _BV(ISC21) | _BV(ISC20); //rising edge interrupt; EICRA determines INT3:0
+	EICRA |= _BV(ISC21); //falling edge interrupt; EICRA determines INT3:0
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
@@ -101,7 +102,7 @@ void initTimer1 (void){ //initialize Timer 1 for CTC (Clear Timer on Compare)
 void mTimer(int count){ // delay microsecond
 	int i = 0; //initialize loop counter
 	/*Enable the output compare interrupt enable*/
-	//TIMSK1 = TIMSK1 | 0b00000010; // --ODA edit: becomes
+	//TIMSK1 = TIMSK1 | 0b00000010; // --ODA edit: interrupt is enabled by sei(); function
 	/*initialize timer 1 to run at CPU clock (1MHz)*/
 	TCCR1B |= _BV(CS10);
 	/* Clear the timer interrupt flag and begin timer */
@@ -119,9 +120,9 @@ void mTimer(int count){ // delay microsecond
 } //mTimer
 
 /**********INTERRUPT SERVICE ROUTINES**********/
-/*sensor 3: 2nt Optical Inductive, Active HIGH starts AD conversion*/
+/*sensor 3: 2nt Optical Inductive, Active LOW starts AD conversion*/
 ISR(INT2_vect){
-	//when there is a rising edge on PD2, ADC is triggered which is currently ADC1 (PF1)
+	//when there is a falling edge on PD2, ADC is triggered which is currently ADC1 (PF1)
 	ADCSRA |= _BV(ADSC);
 }
 ISR(ADC_vect){

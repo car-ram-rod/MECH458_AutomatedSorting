@@ -9,7 +9,7 @@ void initTimer1(void){ //initialize Timer 1 for CTC (Clear Timer on Compare)
 	/*set the initial value of the Timer rCounter to 0x0000*/
 	TCNT1 = 0x0000;
 	/*Enable the output compare interrupt enable*/
-	TIMSK1=TIMSK1|0b00000010;
+	//TIMSK1=TIMSK1|0b00000010;
 	return;
 }
 void mTimer(int count){ // delay microsecond

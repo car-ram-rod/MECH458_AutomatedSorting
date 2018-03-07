@@ -26,8 +26,8 @@
 #include "interrupt.h"
 
 /*Function Declarations*/
-void stepperControl(int steps,int *stepperPos,int *stepperIt);
-void stepperHome(int *stepperPos,int *stepperIt);
+void stepperControl(int steps,int *stepperPos);
+void stepperHome(int *stepperPos);
 void setupPWM(int motorDuty);
 void setupISR(void);
 void setupADC(void);
@@ -45,7 +45,7 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 volatile unsigned int ADCResult; //16 bits: 0 => (2^17-1)
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1)
 volatile unsigned char HallEffect;
-unsigned int stepperSigOrd[4] = {0b00110010,0b00010110,0b00101001,0b00001101};
+unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
 	//int motorRotation[]= {0b00110000,0b00000110,0b00101000,0b00000101};
 
 /* Main Routine */
@@ -54,14 +54,14 @@ int main(int argc, char *argv[]){
 	//uint8_t stepperSpeed = 0x00;
 	//uint8_t stepperDirection = 0x00; //greater than 0 => clockwise (CW); 0 => counter-clockwise (CCW)
 	int stepperPosition = 0; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
-	int stepperIteration = 0b00001101;
+	int stepperIteration = 0;
 	//uint8_t motorDirection = 0b00;
 	HallEffect=0x00;
 
 	/*initializations*/
 	cli(); //disable interrupts
 	//setupPWM(CONVEYOR_SPEED); //DC Motor PWM;
-	//setupISR();
+	setupISR();
 	//setupADC();
 	
 	/*Port I/O Definitions*/
@@ -70,24 +70,25 @@ int main(int argc, char *argv[]){
 	//DDRB = 0xFF; /*controls dc motor: PB7=PWM signal PB3:0={INA,INB,ENA,ENB}*/
 	DDRC = 0xFF; //LEDs Debugging
 	//DDRD = 0xF0; //upper nibble for on-board bi-color LEDs, interrupts on lower nibble	PORTD3:0=INT3:0
-	DDRE = 0x00; /*PE4=HallEffect for stepper*/
+	DDRE = 0x00; /*PE6=HallEffect for stepper*/
 	DDRF = 0x00; /*PF1=ADC1 pin*/
-
-	//sei(); //enable interrupts; currently breaks Timer 1...
 	initTimer1();
+	sei(); //enable interrupts; currently breaks Timer 1...
+	
 	/*code begins*/
-	stepperHome(&stepperPosition,&stepperIteration);
+	
 	mTimer(1000);
 	PORTC=0b11000000;
 	mTimer(1000);
-	PORTC=stepperIteration;
+	PORTC=stepperSigOrd[stepperIteration];
 	mTimer(1000);
-	HallEffect=0x00;
+	
 	uint8_t LEDOutput=0b00000001;
 	int i, k;
 	//LED beginning sequence
 
 	while(1){
+		EIMSK|=_BV(INT6); //re-initialize Hall Effect interrupt
 		for(i=0;i<1;i++){
 			for(k=0;k<8;k++){
 				PORTC = (LEDOutput << k);
@@ -98,43 +99,38 @@ int main(int argc, char *argv[]){
 				mTimer(200);
 			}
 		}
+		HallEffect=0x00;
+		stepperHome(&stepperPosition, &stepperIteration);
+		mTimer(2000);
 		/*stepper function testing*/
-		stepperControl(17,&stepperPosition,&stepperIteration); //~30 degrees
-		mTimer(1500);
-		stepperControl(33,&stepperPosition,&stepperIteration); //~60 degrees
-		mTimer(1500);
-		stepperControl(100,&stepperPosition,&stepperIteration); //180 degrees
-		mTimer(1500);
-		stepperControl(-100,&stepperPosition,&stepperIteration); //-180 degrees
-		mTimer(1500);
-		stepperControl(-33,&stepperPosition,&stepperIteration); //~-60 degrees
-		mTimer(1500);
-		stepperControl(-17,&stepperPosition,&stepperIteration); //~-30 degrees
-		mTimer(1500);
+		stepperControl(17,&stepperPosition); //~30 degrees
+		mTimer(500);
+		stepperControl(33,&stepperPosition); //~60 degrees
+		mTimer(500);
+		stepperControl(100,&stepperPosition); //180 degrees
+		mTimer(500);
+		stepperControl(-100,&stepperPosition); //-180 degrees
+		mTimer(500);
+		stepperControl(-50,&stepperPosition); //~-60 degrees
+		mTimer(500);
+		stepperControl(-100,&stepperPosition); //~-30 degrees
+		mTimer(500);
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
 }
 
 /*function allows control of direction and quantity of steps to */
-void stepperControl(int steps,int *stepperPos,int *stepperIt){
+void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
 	uint8_t maxDelay = 20; //20ms corresponds to 50 steps per second
-	uint8_t minDelay = 10; //5ms corresponds to 200 steps per second; or 1 revolution per second
+	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
 	uint8_t delay = maxDelay;
-	uint8_t offset = 0;
-	char DIRECTION = 1;
-	int CURRENT_ITERATION = 0;
+	int PORTAREGSet = *stepperIt;
+	int DIRECTION = 1;
 	unsigned int absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
-	
-	/*determine last known location of the stepper motor and apply an offset*/
-	if (*stepperIt == stepperSigOrd[0]) offset=0;
-	else if (*stepperIt == stepperSigOrd[1]) offset=1;
-	else if (*stepperIt == stepperSigOrd[2]) offset=2;
-	else if (*stepperIt == stepperSigOrd[3]) offset=3;
-	//special case when not enough time to fully ramp-up; re-set minDelay
 	if(absSteps<(differential*2)){
 		minDelay=maxDelay-absSteps/2;
 		differential = maxDelay - minDelay;
@@ -142,11 +138,10 @@ void stepperControl(int steps,int *stepperPos,int *stepperIt){
 	//determine direction 
 	if (steps > 0) DIRECTION = 1;// positive or clock-wise
 	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise
-	else DIRECTION = 0;
 	
-	CURRENT_ITERATION = offset + DIRECTION;//saves some math later during "for" loop
+	//CURRENT_ITERATION = offset + DIRECTION;//saves some math later during "for" loop
 	
-	for(i=0;i<absSteps;i++){
+	for(i=1;i<=absSteps;i++){
 		//ramp up
 		if((absSteps-i-1) > differential){ //the "added" negative one causes it to slow down one step early
 			if(delay>minDelay)delay -= 1;
@@ -156,30 +151,46 @@ void stepperControl(int steps,int *stepperPos,int *stepperIt){
 			else delay = maxDelay;
 		}
 		/*determine direction and then iterate through stepper signals in correct direction*/
-		PORTA = stepperSigOrd[(CURRENT_ITERATION+DIRECTION*i)%4];
-		PORTC = stepperSigOrd[(CURRENT_ITERATION+DIRECTION*i)%4];
+		PORTAREGSet+=DIRECTION*i;
+		if(PORTAREGSet==4)PORTAREGSet=0;
+		if(PORTAREGSet==-1)PORTAREGSet=3;
+		//PORTAREGSet = ((stepperIteration+DIRECTION*i)%4);
+		PORTA = stepperSigOrd[PORTAREGSet];
 		mTimer(delay);
 	}
-	
-	*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
+	*stepperIteration=PORTAREGSet;
+	//*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
 	*stepperPos += steps;
 	*stepperPos %= 200; //represents 200 (0->199) steps of stepper positioning in a circle
-	/*better method would be to compare to Stepper Position*/
-	PORTA &= 0b11011011; //disable stepper motion while leaving other
 	
 	return; //returns nothing
 }
-void stepperHome(int *stepperPos,int *stepperIt){
-	uint8_t maxDelay = 40; //20ms corresponds to 50 steps per second
-
-	int i;
-	for(i=0; i<101;i++){
-		//PORTA = stepperSigOrd[i%4];
-		PORTC = stepperSigOrd[i%4];
-		mTimer(maxDelay);
+void stepperHome(int *stepperPos, int *stepperIt){
+	uint8_t delay = 20; //20ms corresponds to 50 steps per second
+	int i=0;
+	int x=0;
+	uint8_t offset=8; //arbitrary at this point
+	uint8_t DIRECTION=1; //1 for clockwise, -1 for counter-clockwise
+	PORTA=0x00;
+	while (HallEffect==0){
+		PORTA = stepperSigOrd[i];
+		mTimer(delay);
+		i++;
+		if (i==4)i=0;
 	}
+	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6) 
+	/*Insert code here to compensate for offset*/
+	for (x=0;x<offset;x++){
+		i+=DIRECTION;
+		if (i==4)i=0;
+		if (i==-1)i=3;
+		PORTA = stepperSigOrd[i];
+		mTimer(delay);
+	}
+	//
+	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
 	*stepperPos=0; //base stepper position (on black)
-	*stepperIt = stepperSigOrd[(i-1)%4]; //remember current setting of stepper
+
 }
 /*initializing the dc motor*/
 void setupPWM(int motorDuty){
@@ -198,7 +209,7 @@ void setupISR(void){
 	EIMSK |= _BV(INT6); //| _BV(INT2) | _BV(INT0); //enable INT6, INT2 and INT0
 	//EICRA |= _BV(ISC21) | _BV(ISC20) | _BV(ISC01) | _BV(ISC00); //rising edge interrupt
 	EICRB |= _BV(ISC61); //falling edge for INT6 Hall Effect
-	EICRB &= 0b11101111;
+	//EICRB &= 0b11101111;
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
@@ -232,7 +243,6 @@ ISR(INT2_vect){
 */
 ISR(INT6_vect){ //Active low for hall effect sensor on PE4
 	HallEffect=0x01;
-	PORTC=0b01010101;
 }
 /*
 //ADC ISR: triggered when ADC is completed
