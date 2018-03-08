@@ -190,8 +190,10 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise
 	
 	//CURRENT_ITERATION = offset + DIRECTION;//saves some math later during "for" loop
-	
-	for(i=1;i<=absSteps;i++){
+	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
+	for(i=1;i<=absSteps;i++){		
+		TCNT2=0x00; //set timer equal to zero
+		if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, 
 		//ramp up
 		if((absSteps-i-1) > differential){ //the "added" negative one causes it to slow down one step early
 			if(delay>minDelay)delay -= 1;
@@ -206,8 +208,15 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 		if(PORTAREGSet==-1)PORTAREGSet=3;
 		//PORTAREGSet = ((stepperIteration+DIRECTION*i)%4);
 		PORTA = stepperSigOrd[PORTAREGSet];
-		mTimer2(delay);
+		while (i<delay){ //iterate through given count
+			if ((TIFR2 & 0x01) == 0x01){ //if overflow has occurred in counter
+				TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit
+				i+=1;
+				//equivalent; TIFR2 |= _BV(TOV2)
+			}
+		}
 	}
+	TCCR2B&=0b11111000; //disable timer 2
 	*stepperIt=PORTAREGSet;
 	//*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
 	*stepperPos += steps;
