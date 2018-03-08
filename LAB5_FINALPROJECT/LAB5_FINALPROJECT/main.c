@@ -33,6 +33,10 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define DC_FORWARD 0x01	//dc motor counter-clockwise
 #define DC_BRAKE 0x00 //dc motor brake
 #define CONVEYOR_SPEED 30 //50 is maximum for sustainability
+#define AL_REFLECTIVITY 800 //minimum reflectivity of aluminum
+#define FE_REFLECTIVITY 400 //minimum reflectivity of steel
+#define WH_REFLECTIVITY 800 //minimum reflectivity of white plastic
+#define BL_REFLECTIVITY 400 //minimum reflectivity of black plastic
 
 /*Global Variables*/
 volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
@@ -49,12 +53,24 @@ int main(int argc, char *argv[]){
 	/*User Variables*/
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0x00;
+	int stepperMovement = 0x00;
 	uint8_t oldADCResult = 0x00;
-	int objectsMeasured = 0x00; //count of objects that have had their reflectivities quantified
-	int objectsSorted = 0x00; //count of objects that have been sorted
-	int senseObjCnt = 0x00; //keeps a total count of objects between 1st and 2nd optical sensors 
-	int measuredObjCnt = 0x00; //keeps a count of objects that have been measured, but not sorted
-	int unsortedObjCnt = 0x00; //keeps a total count of objects between 1st and 3rd optical sensors (i.e. objects on conveyor)
+	int OI_Count = 0x00; //count of objects that have hit optical sensor 1 (OI)
+	int RL_Count = 0x00; //count of objects that have had their reflectivities quantified
+	int OR_Count = 0x00; //count of objects that have hit optical sensor 2 (OR)
+	int EX_Count = 0x00; //count of objects that have hit optical sensor 3 (EX)
+	int OIOR_Count = 0x00; //count of objects between optical sensors 1 and 2
+	uint16_t tempReflArray[8];
+	uint8_t tempType=0;
+	uint8_t tempFerrous=0;
+	//initialize structure to store material characteristics
+	typedef struct material{
+		uint16_t reflectance; //10 bit value
+		int type; //black=0;;aluminum=50;white=100;steel=150
+		uint8_t inductive; //states whether object is ferrous or not (0=>non-ferrous;1=>ferrous)
+		}material;
+	//initialize array of structures for storage	
+	struct material materialArray[64];
 	/*initializations*/
 	cli(); //disable interrupts
 	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
@@ -72,118 +88,157 @@ int main(int argc, char *argv[]){
 	DDRE = 0x00; /*PE4=HallEffect for stepper*/
 	DDRF = 0x00; /*PF1=ADC1 pin*/	
 	sei(); //enable interrupts
-	// PORTB &= 0b0000; //start motor in specified direction
-	//PORTB |=0b1000;
+	// PORTB &= 0b1110000; //apply Vcc brake to motor
+	//PORTB |=0b1000; //start motor in specified direction
 	HallEffect=0x00; //set HallEffect equal to zero so while loop is continuous until break out
 	stepperHome(&stepperPosition,&stepperIteration);
 	
 	/*initialize flags and counters*/
-	ADCObjCntConveyor=0;
-	ADCObjCntSense=0;
-	inductiveFlag=0;
+	opt1Flag=0x00;
+	opt2Flag=0x00;
+	inductiveFlag=0x00;
+	optExitFlag=0x00;
 	
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
-	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
 	while(1){
 		if(opt1Flag){
-			opt1Flag=0x00;
+			opt1Flag=0x00; //reset flag
 			ADCSRA |= _BV(ADSC); //initialize the ADC
-			//start ADC conversions
-			//let reflectivity's build up to a maximum number
+			OI_Count+=1; //add one to amount of objects unsorted
+			OIOR_Count+=1;
 		} 
-		if(ADCResultFlag){
+		if(ADCResultFlag && OIOR_Count>0){ //if an ADC conversion is complete and there is an object between optical sensors 1 and 2
+			ADCResultFlag=0; //reset flag
 			if(ADCResult>oldADCResult){ //reflectivity is increasing still
 				oldADCResult=ADCResult;
-			}else if((ADCResult<0x04) && (ADCResult<oldADCResult)){ //minimal to no reflection AND reflectivities have been reducing
-				//value of oldADCResult is added to a temporary array
+			}else if((ADCResult<0x04) && (ADCResult<oldADCResult)){ //minimal to no reflection AND reflectivities have been reducing	
+				tempReflArray[RL_Count]=oldADCResult;//value of oldADCResult is added to a temporary array
+				RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
 				oldADCResult=0x00;//reset oldADCResult to 0 for the next objects reflectivites to be measured
-				//set new link in relation to inductive sensing?
 			}
-			ADCResultFlag=0;
-		}
+			ADCSRA |= _BV(ADSC); //re-trigger ADC
+		} else ADCResultFlag=0; //reset flag
 		if(opt2Flag){
-			opt2Flag=0x00;
+			opt2Flag=0x00; //reset flag
 			if(inductiveFlag){ //object is metal: aluminum (light), steel (dark)
 				inductiveFlag=0x00;
+				tempFerrous=1;
 				//based on reflectivity, make an objective decision
+				if (tempReflArray[OR_Count]>AL_REFLECTIVITY){
+					tempType=150;//object is aluminum
+					} else {
+					tempType=50;//object is steel
+				}
 			} else { //object is plastic: white (light), black (dark)
-				//based on reflectivity, make an objective decision
+				tempFerrous=0;
+				if (tempReflArray[OR_Count]>WH_REFLECTIVITY){
+					tempType=100;//object is white plastic
+					} else {
+					tempType=0;//object is black plastic
+				}
 			}
+			//add reflectivity, object type (black=0;aluminum=50;white=100;steel=150), and ferrousity (made-up word ':)') of object to structure
+			materialArray[OR_Count].reflectance=tempReflArray[OR_Count];//unneccesary, but for completeness it exists
+			materialArray[OR_Count].inductive=tempFerrous;
+			materialArray[OR_Count].type=tempType;
+			OR_Count+=1;
+			OIOR_Count-=1; //decrement count of objects between optical sensors 1 and 2
 		}
-		if(optExitFlag){
-			optExitFlag=0x00;
+		if(optExitFlag){ //object has hit sensor at end of conveyor
+			optExitFlag=0x00; //reset flag
+			//corresponding positions (black=0;aluminum=50;white=100;steel=150)
+			//if object type matches stepper location; do nothing...
+			stepperMovement=stepperPosition-materialArray[EX_Count].type;
+			if (stepperMovement!=0){//if object type doesn't match stepper location; stop motor, move stepper, start motor
+				PORTB &=0xF0; //Apply Vcc brake to motor
+				//stepper rotation logic
+				if (stepperMovement==150) stepperMovement=-50;
+				else if (stepperMovement==-150) stepperMovement=50;
+				else if (stepperMovement== 100) stepperMovement=-100; //counter-clockwise is more efficient for particular stepper
+				stepperControl(stepperMovement, &stepperPosition, &stepperIteration);//rotate stepper to proper location
+				PORTB |=0b00001000; //start motor forwards
+			}		
+			EX_Count+=1;
 		}
-
+	//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
+	OI_Count &= 0b00111111;
+	RL_Count &= 0b00111111;
+	OR_Count &= 0b00111111;
+	EX_Count &= 0b00111111;
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
 }
 
 /*function allows control of direction and quantity of steps to */
-void stepperControl(int steps,int *stepperPos,int *stepperIt){
+void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
 	uint8_t maxDelay = 20; //20ms corresponds to 50 steps per second
-	uint8_t minDelay = 10; //5ms corresponds to 200 steps per second; or 1 revolution per second
+	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
 	uint8_t delay = maxDelay;
-	uint8_t offset = 0;
-	char DIRECTION = 1;
-	int CURRENT_ITERATION = 0;
-	unsigned int absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
-	
-	/*determine last known location of the stepper motor and apply an offset*/
-	if (*stepperIt == stepperSigOrd[0]) offset=0;
-	else if (*stepperIt == stepperSigOrd[1]) offset=1;
-	else if (*stepperIt == stepperSigOrd[2]) offset=2;
-	else if (*stepperIt == stepperSigOrd[3]) offset=3;
-	//special case when not enough time to fully ramp-up; re-set minDelay
+	int PORTAREGSet = *stepperIt;
+	int DIRECTION = 1;
+	uint16_t absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
 	if(absSteps<(differential*2)){
 		minDelay=maxDelay-absSteps/2;
 		differential = maxDelay - minDelay;
 	}
-	//determine direction
+	//determine direction 
 	if (steps > 0) DIRECTION = 1;// positive or clock-wise
 	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise
-	else DIRECTION = 0;
 	
-	CURRENT_ITERATION = offset + DIRECTION;//saves some math later during "for" loop
+	//CURRENT_ITERATION = offset + DIRECTION;//saves some math later during "for" loop
 	
-	for(i=0;i<absSteps;i++){
+	for(i=1;i<=absSteps;i++){
 		//ramp up
-		if((absSteps-i) > differential){
+		if((absSteps-i-1) > differential){ //the "added" negative one causes it to slow down one step early
 			if(delay>minDelay)delay -= 1;
 			else delay = minDelay;
-			} else { //ramp down if the amount of steps left
+		} else { //ramp down if the amount of steps left are less than the differential between max and min delays
 			if(delay<maxDelay)delay += 1;
 			else delay = maxDelay;
 		}
 		/*determine direction and then iterate through stepper signals in correct direction*/
-		PORTA = stepperSigOrd[(CURRENT_ITERATION+DIRECTION*i)%4];
-		//PORTC = stepperSigOrd[(CURRENT_ITERATION+DIRECTION*i)%4];
-		mTimer(delay);
+		PORTAREGSet+=DIRECTION;
+		if(PORTAREGSet==4)PORTAREGSet=0;
+		if(PORTAREGSet==-1)PORTAREGSet=3;
+		//PORTAREGSet = ((stepperIteration+DIRECTION*i)%4);
+		PORTA = stepperSigOrd[PORTAREGSet];
+		mTimer2(delay);
 	}
-	
-	*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
+	*stepperIt=PORTAREGSet;
+	//*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
 	*stepperPos += steps;
 	*stepperPos %= 200; //represents 200 (0->199) steps of stepper positioning in a circle
-	
 	return; //returns nothing
 }
-void stepperHome(int *stepperPos,int *stepperIt){
-	uint8_t delay = 30; //20ms corresponds to 50 steps per second
+void stepperHome(int *stepperPos, int *stepperIt){
+	uint8_t delay = 20; //20ms corresponds to 50 steps per second
 	int i=0;
+	int x=0;
+	uint8_t offset=8; //arbitrary at this point
+	uint8_t DIRECTION=1; //1 for clockwise, -1 for counter-clockwise
 	PORTA=0x00;
 	while (HallEffect==0){
-		PORTA = stepperSigOrd[i%4];
+		PORTA = stepperSigOrd[i];
 		mTimer(delay);
 		i++;
+		if (i==4)i=0;
 	}
+	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6)
 	/*Insert code here to compensate for offset*/
+	for (x=0;x<offset;x++){
+		i+=DIRECTION;
+		if (i==4)i=0;
+		if (i==-1)i=3;
+		PORTA = stepperSigOrd[i];
+		mTimer(delay);
+	}
 	//
-	//	
-	*stepperPos=0; //base stepper position (on black)
-	*stepperIt = stepperSigOrd[(i-1)%4]; //remember current setting of stepper
+	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
+	*stepperPos = 0; //base stepper position (on black)
 }
 /*initializing the dc motor*/
 void setupPWM(int motorDuty){
@@ -243,7 +298,7 @@ ISR(INT4_vect){ //on PE4; active low
 	optExitFlag=0x01;
 }
 /*sensor 6: HE: Hall Effect sensor; used for homing stepper*/
-ISR(INT6_vect){ //Active low for hall effect sensor on PE6
+ISR(INT6_vect){ //on PE6; Active low for hall effect sensor 
 	HallEffect=0x01;
 }
 

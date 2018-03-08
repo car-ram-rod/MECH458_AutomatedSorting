@@ -26,8 +26,8 @@
 #include "interrupt.h"
 
 /*Function Declarations*/
-void stepperControl(int steps,int *stepperPos);
-void stepperHome(int *stepperPos);
+void stepperControl(int steps,int *stepperPos, int *stepperIt);
+void stepperHome(int *stepperPos, int *stepperIt);
 void setupPWM(int motorDuty);
 void setupISR(void);
 void setupADC(void);
@@ -73,6 +73,7 @@ int main(int argc, char *argv[]){
 	DDRE = 0x00; /*PE6=HallEffect for stepper*/
 	DDRF = 0x00; /*PF1=ADC1 pin*/
 	initTimer1();
+	timer2Init();
 	sei(); //enable interrupts; currently breaks Timer 1...
 	
 	/*code begins*/
@@ -101,20 +102,23 @@ int main(int argc, char *argv[]){
 		}
 		HallEffect=0x00;
 		stepperHome(&stepperPosition, &stepperIteration);
+		
 		mTimer(2000);
 		/*stepper function testing*/
-		stepperControl(17,&stepperPosition); //~30 degrees
-		mTimer(500);
-		stepperControl(33,&stepperPosition); //~60 degrees
-		mTimer(500);
-		stepperControl(100,&stepperPosition); //180 degrees
-		mTimer(500);
-		stepperControl(-100,&stepperPosition); //-180 degrees
-		mTimer(500);
-		stepperControl(-50,&stepperPosition); //~-60 degrees
-		mTimer(500);
-		stepperControl(-100,&stepperPosition); //~-30 degrees
-		mTimer(500);
+		stepperControl(17,&stepperPosition, &stepperIteration); //~30 degrees
+		mTimer(2000);
+		stepperControl(33,&stepperPosition, &stepperIteration); //~60 degrees
+		mTimer(2000);
+		stepperControl(100,&stepperPosition, &stepperIteration); //180 degrees
+		mTimer(2000);
+		stepperControl(-100,&stepperPosition, &stepperIteration); //-180 degrees
+		mTimer(2000);
+		stepperControl(-33,&stepperPosition, &stepperIteration); //~-60 degrees
+		mTimer(2000);
+		stepperControl(-33,&stepperPosition, &stepperIteration); //~-60 degrees
+		mTimer(2000);
+		stepperControl(-100,&stepperPosition, &stepperIteration); //~-30 degrees
+		mTimer(2000);
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
@@ -130,7 +134,7 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	uint8_t delay = maxDelay;
 	int PORTAREGSet = *stepperIt;
 	int DIRECTION = 1;
-	unsigned int absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
+	uint16_t absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
 	if(absSteps<(differential*2)){
 		minDelay=maxDelay-absSteps/2;
 		differential = maxDelay - minDelay;
@@ -156,9 +160,9 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 		if(PORTAREGSet==-1)PORTAREGSet=3;
 		//PORTAREGSet = ((stepperIteration+DIRECTION*i)%4);
 		PORTA = stepperSigOrd[PORTAREGSet];
-		mTimer(delay);
+		mTimer2(delay);
 	}
-	*stepperIteration=PORTAREGSet;
+	*stepperIt=PORTAREGSet;
 	//*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
 	*stepperPos += steps;
 	*stepperPos %= 200; //represents 200 (0->199) steps of stepper positioning in a circle
@@ -189,6 +193,7 @@ void stepperHome(int *stepperPos, int *stepperIt){
 	}
 	//
 	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
+	PORTA = stepperSigOrd[i];
 	*stepperPos=0; //base stepper position (on black)
 
 }

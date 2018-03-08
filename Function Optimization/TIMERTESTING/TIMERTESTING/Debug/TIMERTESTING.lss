@@ -1,0 +1,679 @@
+
+TIMERTESTING.elf:     file format elf32-avr
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .data         00000000  00800100  00800100  0000034a  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  1 .text         000002f6  00000000  00000000  00000054  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  2 .comment      00000030  00000000  00000000  0000034a  2**0
+                  CONTENTS, READONLY
+  3 .note.gnu.avr.deviceinfo 00000040  00000000  00000000  0000037c  2**2
+                  CONTENTS, READONLY
+  4 .debug_aranges 00000038  00000000  00000000  000003bc  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  5 .debug_info   00000f02  00000000  00000000  000003f4  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  6 .debug_abbrev 00000bdf  00000000  00000000  000012f6  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  7 .debug_line   0000052e  00000000  00000000  00001ed5  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  8 .debug_frame  00000054  00000000  00000000  00002404  2**2
+                  CONTENTS, READONLY, DEBUGGING
+  9 .debug_str    000005a2  00000000  00000000  00002458  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 10 .debug_loc    00000327  00000000  00000000  000029fa  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 11 .debug_ranges 00000028  00000000  00000000  00002d21  2**0
+                  CONTENTS, READONLY, DEBUGGING
+
+Disassembly of section .text:
+
+00000000 <__vectors>:
+   0:	4b c0       	rjmp	.+150    	; 0x98 <__ctors_end>
+   2:	00 00       	nop
+   4:	51 c0       	rjmp	.+162    	; 0xa8 <__bad_interrupt>
+   6:	00 00       	nop
+   8:	4f c0       	rjmp	.+158    	; 0xa8 <__bad_interrupt>
+   a:	00 00       	nop
+   c:	4d c0       	rjmp	.+154    	; 0xa8 <__bad_interrupt>
+   e:	00 00       	nop
+  10:	4b c0       	rjmp	.+150    	; 0xa8 <__bad_interrupt>
+  12:	00 00       	nop
+  14:	49 c0       	rjmp	.+146    	; 0xa8 <__bad_interrupt>
+  16:	00 00       	nop
+  18:	47 c0       	rjmp	.+142    	; 0xa8 <__bad_interrupt>
+  1a:	00 00       	nop
+  1c:	45 c0       	rjmp	.+138    	; 0xa8 <__bad_interrupt>
+  1e:	00 00       	nop
+  20:	43 c0       	rjmp	.+134    	; 0xa8 <__bad_interrupt>
+  22:	00 00       	nop
+  24:	41 c0       	rjmp	.+130    	; 0xa8 <__bad_interrupt>
+  26:	00 00       	nop
+  28:	3f c0       	rjmp	.+126    	; 0xa8 <__bad_interrupt>
+  2a:	00 00       	nop
+  2c:	3d c0       	rjmp	.+122    	; 0xa8 <__bad_interrupt>
+  2e:	00 00       	nop
+  30:	3b c0       	rjmp	.+118    	; 0xa8 <__bad_interrupt>
+  32:	00 00       	nop
+  34:	39 c0       	rjmp	.+114    	; 0xa8 <__bad_interrupt>
+  36:	00 00       	nop
+  38:	37 c0       	rjmp	.+110    	; 0xa8 <__bad_interrupt>
+  3a:	00 00       	nop
+  3c:	35 c0       	rjmp	.+106    	; 0xa8 <__bad_interrupt>
+  3e:	00 00       	nop
+  40:	33 c0       	rjmp	.+102    	; 0xa8 <__bad_interrupt>
+  42:	00 00       	nop
+  44:	31 c0       	rjmp	.+98     	; 0xa8 <__bad_interrupt>
+  46:	00 00       	nop
+  48:	2f c0       	rjmp	.+94     	; 0xa8 <__bad_interrupt>
+  4a:	00 00       	nop
+  4c:	2d c0       	rjmp	.+90     	; 0xa8 <__bad_interrupt>
+  4e:	00 00       	nop
+  50:	2b c0       	rjmp	.+86     	; 0xa8 <__bad_interrupt>
+  52:	00 00       	nop
+  54:	29 c0       	rjmp	.+82     	; 0xa8 <__bad_interrupt>
+  56:	00 00       	nop
+  58:	27 c0       	rjmp	.+78     	; 0xa8 <__bad_interrupt>
+  5a:	00 00       	nop
+  5c:	25 c0       	rjmp	.+74     	; 0xa8 <__bad_interrupt>
+  5e:	00 00       	nop
+  60:	23 c0       	rjmp	.+70     	; 0xa8 <__bad_interrupt>
+  62:	00 00       	nop
+  64:	21 c0       	rjmp	.+66     	; 0xa8 <__bad_interrupt>
+  66:	00 00       	nop
+  68:	1f c0       	rjmp	.+62     	; 0xa8 <__bad_interrupt>
+  6a:	00 00       	nop
+  6c:	1d c0       	rjmp	.+58     	; 0xa8 <__bad_interrupt>
+  6e:	00 00       	nop
+  70:	1b c0       	rjmp	.+54     	; 0xa8 <__bad_interrupt>
+  72:	00 00       	nop
+  74:	19 c0       	rjmp	.+50     	; 0xa8 <__bad_interrupt>
+  76:	00 00       	nop
+  78:	17 c0       	rjmp	.+46     	; 0xa8 <__bad_interrupt>
+  7a:	00 00       	nop
+  7c:	15 c0       	rjmp	.+42     	; 0xa8 <__bad_interrupt>
+  7e:	00 00       	nop
+  80:	13 c0       	rjmp	.+38     	; 0xa8 <__bad_interrupt>
+  82:	00 00       	nop
+  84:	11 c0       	rjmp	.+34     	; 0xa8 <__bad_interrupt>
+  86:	00 00       	nop
+  88:	0f c0       	rjmp	.+30     	; 0xa8 <__bad_interrupt>
+  8a:	00 00       	nop
+  8c:	0d c0       	rjmp	.+26     	; 0xa8 <__bad_interrupt>
+  8e:	00 00       	nop
+  90:	0b c0       	rjmp	.+22     	; 0xa8 <__bad_interrupt>
+  92:	00 00       	nop
+  94:	09 c0       	rjmp	.+18     	; 0xa8 <__bad_interrupt>
+	...
+
+00000098 <__ctors_end>:
+  98:	11 24       	eor	r1, r1
+  9a:	1f be       	out	0x3f, r1	; 63
+  9c:	cf ef       	ldi	r28, 0xFF	; 255
+  9e:	d0 e2       	ldi	r29, 0x20	; 32
+  a0:	de bf       	out	0x3e, r29	; 62
+  a2:	cd bf       	out	0x3d, r28	; 61
+  a4:	20 d0       	rcall	.+64     	; 0xe6 <main>
+  a6:	25 c1       	rjmp	.+586    	; 0x2f2 <_exit>
+
+000000a8 <__bad_interrupt>:
+  a8:	ab cf       	rjmp	.-170    	; 0x0 <__vectors>
+
+000000aa <timer2Init>:
+		} //if end
+	}//while end
+	return;
+} //mTimer
+void timer2Init(void){
+	TIMSK2 |= _BV(TOIE2); //enable Timer/Counter 2 Overflow interrupt; sets TOV2 bit in TIFR2 register upon overflow
+  aa:	e0 e7       	ldi	r30, 0x70	; 112
+  ac:	f0 e0       	ldi	r31, 0x00	; 0
+  ae:	80 81       	ld	r24, Z
+  b0:	81 60       	ori	r24, 0x01	; 1
+  b2:	80 83       	st	Z, r24
+	TCCR2A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV2 flag
+  b4:	10 92 b0 00 	sts	0x00B0, r1	; 0x8000b0 <__TEXT_REGION_LENGTH__+0x7e00b0>
+		//TOP=0xFF; Update is immediate
+	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
+  b8:	e1 eb       	ldi	r30, 0xB1	; 177
+  ba:	f0 e0       	ldi	r31, 0x00	; 0
+  bc:	80 81       	ld	r24, Z
+  be:	83 60       	ori	r24, 0x03	; 3
+  c0:	80 83       	st	Z, r24
+  c2:	08 95       	ret
+
+000000c4 <mTimer2>:
+}
+void mTimer2(int count){
+	int i=0;
+	TCNT2=0x00;
+  c4:	10 92 b2 00 	sts	0x00B2, r1	; 0x8000b2 <__TEXT_REGION_LENGTH__+0x7e00b2>
+	TCCR2A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV2 flag
+		//TOP=0xFF; Update is immediate
+	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
+}
+void mTimer2(int count){
+	int i=0;
+  c8:	20 e0       	ldi	r18, 0x00	; 0
+  ca:	30 e0       	ldi	r19, 0x00	; 0
+	TCNT2=0x00;
+	while (i<count){
+  cc:	05 c0       	rjmp	.+10     	; 0xd8 <mTimer2+0x14>
+		if ((TIFR2 & 0x01) == 0x01){
+  ce:	b8 9b       	sbis	0x17, 0	; 23
+  d0:	fe cf       	rjmp	.-4      	; 0xce <mTimer2+0xa>
+			TIFR2|=0x01;
+  d2:	b8 9a       	sbi	0x17, 0	; 23
+			i+=1;
+  d4:	2f 5f       	subi	r18, 0xFF	; 255
+  d6:	3f 4f       	sbci	r19, 0xFF	; 255
+	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
+}
+void mTimer2(int count){
+	int i=0;
+	TCNT2=0x00;
+	while (i<count){
+  d8:	28 17       	cp	r18, r24
+  da:	39 07       	cpc	r19, r25
+  dc:	1c f4       	brge	.+6      	; 0xe4 <mTimer2+0x20>
+		if ((TIFR2 & 0x01) == 0x01){
+  de:	b8 9b       	sbis	0x17, 0	; 23
+  e0:	f6 cf       	rjmp	.-20     	; 0xce <mTimer2+0xa>
+  e2:	f7 cf       	rjmp	.-18     	; 0xd2 <mTimer2+0xe>
+  e4:	08 95       	ret
+
+000000e6 <main>:
+#define highNibMask 0xF0
+#define lowNibMask 0x0F
+
+/* Main Routine */
+int main(int argc, char *argv[]){
+	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
+  e6:	e1 e6       	ldi	r30, 0x61	; 97
+  e8:	f0 e0       	ldi	r31, 0x00	; 0
+  ea:	80 e8       	ldi	r24, 0x80	; 128
+  ec:	80 83       	st	Z, r24
+	CLKPR = 0;
+  ee:	10 82       	st	Z, r1
+	uint16_t LEDShift = 0;
+	int k;
+	int i;
+
+	/*Timer setup*/
+	TCCR1B |= _BV(CS10); //set clock prescaler: bit 0 of TCCR1B register (TCCR1B |= 0x01)
+  f0:	e1 e8       	ldi	r30, 0x81	; 129
+  f2:	f0 e0       	ldi	r31, 0x00	; 0
+  f4:	80 81       	ld	r24, Z
+  f6:	81 60       	ori	r24, 0x01	; 1
+  f8:	80 83       	st	Z, r24
+	timer2Init();
+  fa:	d7 df       	rcall	.-82     	; 0xaa <timer2Init>
+	DDRC = 0b11111111; /* Sets all pins on Port C to output */
+  fc:	8f ef       	ldi	r24, 0xFF	; 255
+  fe:	87 b9       	out	0x07, r24	; 7
+	DDRD |= 0xF0; /* Sets upper nibble on Port D to output */
+ 100:	8a b1       	in	r24, 0x0a	; 10
+ 102:	80 6f       	ori	r24, 0xF0	; 240
+ 104:	8a b9       	out	0x0a, r24	; 10
+	while(1){ //run program continuously
+		/*LAB1: On board LED testing (D5, D2)*/
+		for(k=0;k<2;k++){
+			PORTD = 0b10100000; //D5=Red; D2=Green
+			mTimer2(1000);
+			PORTD = 0b01010000; //D5=Green; D2=Red
+ 106:	0f 2e       	mov	r0, r31
+ 108:	f0 e5       	ldi	r31, 0x50	; 80
+ 10a:	3f 2e       	mov	r3, r31
+ 10c:	f0 2d       	mov	r31, r0
+	DDRD |= 0xF0; /* Sets upper nibble on Port D to output */
+
+	while(1){ //run program continuously
+		/*LAB1: On board LED testing (D5, D2)*/
+		for(k=0;k<2;k++){
+			PORTD = 0b10100000; //D5=Red; D2=Green
+ 10e:	0f 2e       	mov	r0, r31
+ 110:	f0 ea       	ldi	r31, 0xA0	; 160
+ 112:	2f 2e       	mov	r2, r31
+ 114:	f0 2d       	mov	r31, r0
+			}
+			//start from center and turn ON LEDs going to exterior LEDs using bit shifting
+			LEDOutput = 0b00011000;
+			for(i=0;i<2;i++){
+				for (k=0;k<4;k++){
+					PORTC = (((LEDOutput & highNibMask) << k) + ((LEDOutput & lowNibMask) >> k));
+ 116:	68 94       	set
+ 118:	aa 24       	eor	r10, r10
+ 11a:	a4 f8       	bld	r10, 4
+ 11c:	b1 2c       	mov	r11, r1
+ 11e:	68 94       	set
+ 120:	88 24       	eor	r8, r8
+ 122:	83 f8       	bld	r8, 3
+ 124:	91 2c       	mov	r9, r1
+			mTimer2(200);
+			// push one LED back and forth across display
+			LEDOutput=0b00000001;
+			for(i=0;i<2;i++){
+				for(k=0;k<8;k++){
+					PORTC = (LEDOutput << k);
+ 126:	cc 24       	eor	r12, r12
+ 128:	c3 94       	inc	r12
+ 12a:	d1 2c       	mov	r13, r1
+			}
+			//bit shift grouping of 3 LEDs back and forth across display; 2 LEDs pushed off display at extremes.
+			for(i=0;i<2;i++){
+				for(k=0;k<10;k++){
+					LEDShift = (0b00000111 << k) >> 2; //3 bits are shifted using a 16 bit variable; otherwise overflow occurs
+					LEDOutput = LEDShift; //lower byte of 16 bit variable set equal to 8 bit variable for clarity.
+ 12c:	0f 2e       	mov	r0, r31
+ 12e:	f7 e0       	ldi	r31, 0x07	; 7
+ 130:	ef 2e       	mov	r14, r31
+ 132:	f1 2c       	mov	r15, r1
+ 134:	f0 2d       	mov	r31, r0
+/*User Defines*/
+#define highNibMask 0xF0
+#define lowNibMask 0x0F
+
+/* Main Routine */
+int main(int argc, char *argv[]){
+ 136:	c2 e0       	ldi	r28, 0x02	; 2
+ 138:	d0 e0       	ldi	r29, 0x00	; 0
+		for(k=0;k<2;k++){
+			PORTD = 0b10100000; //D5=Red; D2=Green
+			mTimer2(1000);
+			PORTD = 0b01010000; //D5=Green; D2=Red
+			mTimer2(1000);
+			PORTD = 0b11110000; //D5=Yellow; D2=Yellow
+ 13a:	0f 2e       	mov	r0, r31
+ 13c:	f0 ef       	ldi	r31, 0xF0	; 240
+ 13e:	7f 2e       	mov	r7, r31
+ 140:	f0 2d       	mov	r31, r0
+			mTimer2(1000);
+			PORTD = 0b10010000; //D5=Red; D2=Red
+ 142:	00 e9       	ldi	r16, 0x90	; 144
+			mTimer2(1000);
+			PORTD = 0b01100000; //D5=Green; D2=Green
+ 144:	10 e6       	ldi	r17, 0x60	; 96
+	DDRD |= 0xF0; /* Sets upper nibble on Port D to output */
+
+	while(1){ //run program continuously
+		/*LAB1: On board LED testing (D5, D2)*/
+		for(k=0;k<2;k++){
+			PORTD = 0b10100000; //D5=Red; D2=Green
+ 146:	2b b8       	out	0x0b, r2	; 11
+			mTimer2(1000);
+ 148:	88 ee       	ldi	r24, 0xE8	; 232
+ 14a:	93 e0       	ldi	r25, 0x03	; 3
+ 14c:	bb df       	rcall	.-138    	; 0xc4 <mTimer2>
+			PORTD = 0b01010000; //D5=Green; D2=Red
+ 14e:	3b b8       	out	0x0b, r3	; 11
+			mTimer2(1000);
+ 150:	88 ee       	ldi	r24, 0xE8	; 232
+ 152:	93 e0       	ldi	r25, 0x03	; 3
+ 154:	b7 df       	rcall	.-146    	; 0xc4 <mTimer2>
+			PORTD = 0b11110000; //D5=Yellow; D2=Yellow
+			mTimer2(1000);
+ 156:	7b b8       	out	0x0b, r7	; 11
+ 158:	88 ee       	ldi	r24, 0xE8	; 232
+ 15a:	93 e0       	ldi	r25, 0x03	; 3
+			PORTD = 0b10010000; //D5=Red; D2=Red
+ 15c:	b3 df       	rcall	.-154    	; 0xc4 <mTimer2>
+			mTimer2(1000);
+ 15e:	0b b9       	out	0x0b, r16	; 11
+ 160:	88 ee       	ldi	r24, 0xE8	; 232
+ 162:	93 e0       	ldi	r25, 0x03	; 3
+			PORTD = 0b01100000; //D5=Green; D2=Green
+ 164:	af df       	rcall	.-162    	; 0xc4 <mTimer2>
+			mTimer2(1000);
+ 166:	1b b9       	out	0x0b, r17	; 11
+ 168:	88 ee       	ldi	r24, 0xE8	; 232
+ 16a:	93 e0       	ldi	r25, 0x03	; 3
+ 16c:	ab df       	rcall	.-170    	; 0xc4 <mTimer2>
+ 16e:	21 97       	sbiw	r28, 0x01	; 1
+	DDRC = 0b11111111; /* Sets all pins on Port C to output */
+	DDRD |= 0xF0; /* Sets upper nibble on Port D to output */
+
+	while(1){ //run program continuously
+		/*LAB1: On board LED testing (D5, D2)*/
+		for(k=0;k<2;k++){
+ 170:	51 f7       	brne	.-44     	; 0x146 <main+0x60>
+ 172:	c2 e0       	ldi	r28, 0x02	; 2
+		knightRider=1; //enable knightRider functionality
+		/*LAB1: Knight Rider function. Uses software delay while LAB2 will use hardware interrupts*/
+		if(knightRider>0){
+			//start from center and turn ON LEDs until all LEDs ON; reset.
+			for(k=0;k<2;k++){
+				PORTC = 0b00011000; //set only middle LEDs to ON
+ 174:	d0 e0       	ldi	r29, 0x00	; 0
+ 176:	18 e1       	ldi	r17, 0x18	; 24
+				mTimer2(200);
+ 178:	18 b9       	out	0x08, r17	; 8
+ 17a:	88 ec       	ldi	r24, 0xC8	; 200
+ 17c:	90 e0       	ldi	r25, 0x00	; 0
+				PORTC |= 0b00100100;
+ 17e:	a2 df       	rcall	.-188    	; 0xc4 <mTimer2>
+ 180:	88 b1       	in	r24, 0x08	; 8
+ 182:	84 62       	ori	r24, 0x24	; 36
+				mTimer2(200);
+ 184:	88 b9       	out	0x08, r24	; 8
+ 186:	88 ec       	ldi	r24, 0xC8	; 200
+ 188:	90 e0       	ldi	r25, 0x00	; 0
+				PORTC |= 0b01000010;
+ 18a:	9c df       	rcall	.-200    	; 0xc4 <mTimer2>
+ 18c:	88 b1       	in	r24, 0x08	; 8
+ 18e:	82 64       	ori	r24, 0x42	; 66
+				mTimer2(200);
+ 190:	88 b9       	out	0x08, r24	; 8
+ 192:	88 ec       	ldi	r24, 0xC8	; 200
+ 194:	90 e0       	ldi	r25, 0x00	; 0
+				PORTC |= 0b10000001;
+ 196:	96 df       	rcall	.-212    	; 0xc4 <mTimer2>
+ 198:	88 b1       	in	r24, 0x08	; 8
+				mTimer2(200);
+ 19a:	81 68       	ori	r24, 0x81	; 129
+ 19c:	88 b9       	out	0x08, r24	; 8
+ 19e:	88 ec       	ldi	r24, 0xC8	; 200
+ 1a0:	90 e0       	ldi	r25, 0x00	; 0
+				PORTC = 0b00000000;
+ 1a2:	90 df       	rcall	.-224    	; 0xc4 <mTimer2>
+				mTimer2(200);
+ 1a4:	18 b8       	out	0x08, r1	; 8
+ 1a6:	88 ec       	ldi	r24, 0xC8	; 200
+ 1a8:	90 e0       	ldi	r25, 0x00	; 0
+ 1aa:	8c df       	rcall	.-232    	; 0xc4 <mTimer2>
+ 1ac:	21 97       	sbiw	r28, 0x01	; 1
+
+		knightRider=1; //enable knightRider functionality
+		/*LAB1: Knight Rider function. Uses software delay while LAB2 will use hardware interrupts*/
+		if(knightRider>0){
+			//start from center and turn ON LEDs until all LEDs ON; reset.
+			for(k=0;k<2;k++){
+ 1ae:	21 f7       	brne	.-56     	; 0x178 <main+0x92>
+ 1b0:	c2 e0       	ldi	r28, 0x02	; 2
+ 1b2:	d0 e0       	ldi	r29, 0x00	; 0
+				for (k=0;k<4;k++){
+					PORTC = (((LEDOutput & highNibMask) << k) + ((LEDOutput & lowNibMask) >> k));
+					mTimer2(200);
+				}
+				for (k=2;k>0;k--){
+					PORTC = (((LEDOutput & highNibMask) << k) + ((LEDOutput & lowNibMask) >> k));
+ 1b4:	0f 2e       	mov	r0, r31
+ 1b6:	f2 e4       	ldi	r31, 0x42	; 66
+ 1b8:	6f 2e       	mov	r6, r31
+ 1ba:	f0 2d       	mov	r31, r0
+ 1bc:	0f 2e       	mov	r0, r31
+ 1be:	f4 e2       	ldi	r31, 0x24	; 36
+ 1c0:	7f 2e       	mov	r7, r31
+ 1c2:	f0 2d       	mov	r31, r0
+ 1c4:	22 c0       	rjmp	.+68     	; 0x20a <main+0x124>
+			}
+			//start from center and turn ON LEDs going to exterior LEDs using bit shifting
+			LEDOutput = 0b00011000;
+			for(i=0;i<2;i++){
+				for (k=0;k<4;k++){
+					PORTC = (((LEDOutput & highNibMask) << k) + ((LEDOutput & lowNibMask) >> k));
+ 1c6:	95 01       	movw	r18, r10
+ 1c8:	00 2e       	mov	r0, r16
+ 1ca:	02 c0       	rjmp	.+4      	; 0x1d0 <main+0xea>
+ 1cc:	22 0f       	add	r18, r18
+ 1ce:	33 1f       	adc	r19, r19
+ 1d0:	0a 94       	dec	r0
+ 1d2:	e2 f7       	brpl	.-8      	; 0x1cc <main+0xe6>
+ 1d4:	c4 01       	movw	r24, r8
+ 1d6:	00 2e       	mov	r0, r16
+ 1d8:	02 c0       	rjmp	.+4      	; 0x1de <main+0xf8>
+ 1da:	95 95       	asr	r25
+ 1dc:	87 95       	ror	r24
+ 1de:	0a 94       	dec	r0
+ 1e0:	e2 f7       	brpl	.-8      	; 0x1da <main+0xf4>
+ 1e2:	82 0f       	add	r24, r18
+					mTimer2(200);
+ 1e4:	88 b9       	out	0x08, r24	; 8
+ 1e6:	88 ec       	ldi	r24, 0xC8	; 200
+ 1e8:	90 e0       	ldi	r25, 0x00	; 0
+				mTimer2(200);
+			}
+			//start from center and turn ON LEDs going to exterior LEDs using bit shifting
+			LEDOutput = 0b00011000;
+			for(i=0;i<2;i++){
+				for (k=0;k<4;k++){
+ 1ea:	6c df       	rcall	.-296    	; 0xc4 <mTimer2>
+ 1ec:	0f 5f       	subi	r16, 0xFF	; 255
+ 1ee:	1f 4f       	sbci	r17, 0xFF	; 255
+ 1f0:	04 30       	cpi	r16, 0x04	; 4
+					PORTC = (((LEDOutput & highNibMask) << k) + ((LEDOutput & lowNibMask) >> k));
+					mTimer2(200);
+				}
+				for (k=2;k>0;k--){
+					PORTC = (((LEDOutput & highNibMask) << k) + ((LEDOutput & lowNibMask) >> k));
+ 1f2:	11 05       	cpc	r17, r1
+					mTimer2(200);
+ 1f4:	41 f7       	brne	.-48     	; 0x1c6 <main+0xe0>
+ 1f6:	68 b8       	out	0x08, r6	; 8
+ 1f8:	88 ec       	ldi	r24, 0xC8	; 200
+ 1fa:	90 e0       	ldi	r25, 0x00	; 0
+ 1fc:	63 df       	rcall	.-314    	; 0xc4 <mTimer2>
+ 1fe:	78 b8       	out	0x08, r7	; 8
+ 200:	88 ec       	ldi	r24, 0xC8	; 200
+ 202:	90 e0       	ldi	r25, 0x00	; 0
+				PORTC = 0b00000000;
+				mTimer2(200);
+			}
+			//start from center and turn ON LEDs going to exterior LEDs using bit shifting
+			LEDOutput = 0b00011000;
+			for(i=0;i<2;i++){
+ 204:	5f df       	rcall	.-322    	; 0xc4 <mTimer2>
+ 206:	21 97       	sbiw	r28, 0x01	; 1
+ 208:	19 f0       	breq	.+6      	; 0x210 <main+0x12a>
+ 20a:	00 e0       	ldi	r16, 0x00	; 0
+				for (k=2;k>0;k--){
+					PORTC = (((LEDOutput & highNibMask) << k) + ((LEDOutput & lowNibMask) >> k));
+					mTimer2(200);
+				}
+			}
+			PORTC = 0b00011000;
+ 20c:	10 e0       	ldi	r17, 0x00	; 0
+ 20e:	db cf       	rjmp	.-74     	; 0x1c6 <main+0xe0>
+			mTimer2(200);
+ 210:	88 e1       	ldi	r24, 0x18	; 24
+ 212:	88 b9       	out	0x08, r24	; 8
+ 214:	88 ec       	ldi	r24, 0xC8	; 200
+ 216:	90 e0       	ldi	r25, 0x00	; 0
+			PORTC = 0b00000000;
+ 218:	55 df       	rcall	.-342    	; 0xc4 <mTimer2>
+			mTimer2(200);
+ 21a:	18 b8       	out	0x08, r1	; 8
+ 21c:	88 ec       	ldi	r24, 0xC8	; 200
+ 21e:	90 e0       	ldi	r25, 0x00	; 0
+ 220:	51 df       	rcall	.-350    	; 0xc4 <mTimer2>
+ 222:	68 94       	set
+ 224:	66 24       	eor	r6, r6
+ 226:	61 f8       	bld	r6, 1
+ 228:	71 2c       	mov	r7, r1
+			// push one LED back and forth across display
+			LEDOutput=0b00000001;
+			for(i=0;i<2;i++){
+				for(k=0;k<8;k++){
+					PORTC = (LEDOutput << k);
+ 22a:	23 c0       	rjmp	.+70     	; 0x272 <main+0x18c>
+ 22c:	c6 01       	movw	r24, r12
+ 22e:	0c 2e       	mov	r0, r28
+ 230:	02 c0       	rjmp	.+4      	; 0x236 <main+0x150>
+ 232:	88 0f       	add	r24, r24
+ 234:	99 1f       	adc	r25, r25
+ 236:	0a 94       	dec	r0
+ 238:	e2 f7       	brpl	.-8      	; 0x232 <main+0x14c>
+					mTimer2(200);
+ 23a:	88 b9       	out	0x08, r24	; 8
+ 23c:	88 ec       	ldi	r24, 0xC8	; 200
+ 23e:	90 e0       	ldi	r25, 0x00	; 0
+			PORTC = 0b00000000;
+			mTimer2(200);
+			// push one LED back and forth across display
+			LEDOutput=0b00000001;
+			for(i=0;i<2;i++){
+				for(k=0;k<8;k++){
+ 240:	41 df       	rcall	.-382    	; 0xc4 <mTimer2>
+ 242:	21 96       	adiw	r28, 0x01	; 1
+ 244:	c8 30       	cpi	r28, 0x08	; 8
+ 246:	d1 05       	cpc	r29, r1
+ 248:	89 f7       	brne	.-30     	; 0x22c <main+0x146>
+ 24a:	06 e0       	ldi	r16, 0x06	; 6
+					PORTC = (LEDOutput << k);
+					mTimer2(200);
+				}
+				for(k=6;k>0;k--){
+					PORTC = (LEDOutput << k);
+ 24c:	10 e0       	ldi	r17, 0x00	; 0
+ 24e:	c6 01       	movw	r24, r12
+ 250:	00 2e       	mov	r0, r16
+ 252:	02 c0       	rjmp	.+4      	; 0x258 <main+0x172>
+ 254:	88 0f       	add	r24, r24
+ 256:	99 1f       	adc	r25, r25
+ 258:	0a 94       	dec	r0
+ 25a:	e2 f7       	brpl	.-8      	; 0x254 <main+0x16e>
+					mTimer2(200);
+ 25c:	88 b9       	out	0x08, r24	; 8
+ 25e:	88 ec       	ldi	r24, 0xC8	; 200
+ 260:	90 e0       	ldi	r25, 0x00	; 0
+ 262:	30 df       	rcall	.-416    	; 0xc4 <mTimer2>
+			for(i=0;i<2;i++){
+				for(k=0;k<8;k++){
+					PORTC = (LEDOutput << k);
+					mTimer2(200);
+				}
+				for(k=6;k>0;k--){
+ 264:	01 50       	subi	r16, 0x01	; 1
+ 266:	11 09       	sbc	r17, r1
+ 268:	91 f7       	brne	.-28     	; 0x24e <main+0x168>
+ 26a:	81 e0       	ldi	r24, 0x01	; 1
+ 26c:	68 1a       	sub	r6, r24
+ 26e:	71 08       	sbc	r7, r1
+			mTimer2(200);
+			PORTC = 0b00000000;
+			mTimer2(200);
+			// push one LED back and forth across display
+			LEDOutput=0b00000001;
+			for(i=0;i<2;i++){
+ 270:	91 f1       	breq	.+100    	; 0x2d6 <main+0x1f0>
+ 272:	c0 e0       	ldi	r28, 0x00	; 0
+ 274:	d0 e0       	ldi	r29, 0x00	; 0
+			}
+			//bit shift grouping of 3 LEDs back and forth across display; 2 LEDs pushed off display at extremes.
+			for(i=0;i<2;i++){
+				for(k=0;k<10;k++){
+					LEDShift = (0b00000111 << k) >> 2; //3 bits are shifted using a 16 bit variable; otherwise overflow occurs
+					LEDOutput = LEDShift; //lower byte of 16 bit variable set equal to 8 bit variable for clarity.
+ 276:	da cf       	rjmp	.-76     	; 0x22c <main+0x146>
+ 278:	c7 01       	movw	r24, r14
+ 27a:	04 2c       	mov	r0, r4
+ 27c:	02 c0       	rjmp	.+4      	; 0x282 <main+0x19c>
+ 27e:	88 0f       	add	r24, r24
+ 280:	99 1f       	adc	r25, r25
+ 282:	0a 94       	dec	r0
+ 284:	e2 f7       	brpl	.-8      	; 0x27e <main+0x198>
+ 286:	95 95       	asr	r25
+ 288:	87 95       	ror	r24
+ 28a:	95 95       	asr	r25
+					PORTC = LEDOutput;
+ 28c:	87 95       	ror	r24
+					mTimer2(200);
+ 28e:	88 b9       	out	0x08, r24	; 8
+ 290:	88 ec       	ldi	r24, 0xC8	; 200
+ 292:	90 e0       	ldi	r25, 0x00	; 0
+ 294:	17 df       	rcall	.-466    	; 0xc4 <mTimer2>
+					mTimer2(200);
+				}
+			}
+			//bit shift grouping of 3 LEDs back and forth across display; 2 LEDs pushed off display at extremes.
+			for(i=0;i<2;i++){
+				for(k=0;k<10;k++){
+ 296:	2f ef       	ldi	r18, 0xFF	; 255
+ 298:	42 1a       	sub	r4, r18
+ 29a:	52 0a       	sbc	r5, r18
+ 29c:	8a e0       	ldi	r24, 0x0A	; 10
+ 29e:	48 16       	cp	r4, r24
+ 2a0:	51 04       	cpc	r5, r1
+ 2a2:	51 f7       	brne	.-44     	; 0x278 <main+0x192>
+					PORTC = LEDOutput;
+					mTimer2(200);
+				}
+				for(k=8;k>0;k--){
+					LEDShift = (0b00000111 << k) >> 2;
+					LEDOutput = LEDShift;
+ 2a4:	2e 01       	movw	r4, r28
+ 2a6:	c7 01       	movw	r24, r14
+ 2a8:	04 2c       	mov	r0, r4
+ 2aa:	02 c0       	rjmp	.+4      	; 0x2b0 <main+0x1ca>
+ 2ac:	88 0f       	add	r24, r24
+ 2ae:	99 1f       	adc	r25, r25
+ 2b0:	0a 94       	dec	r0
+ 2b2:	e2 f7       	brpl	.-8      	; 0x2ac <main+0x1c6>
+ 2b4:	95 95       	asr	r25
+ 2b6:	87 95       	ror	r24
+ 2b8:	95 95       	asr	r25
+					PORTC = LEDOutput;
+ 2ba:	87 95       	ror	r24
+					mTimer2(200);
+ 2bc:	88 b9       	out	0x08, r24	; 8
+ 2be:	88 ec       	ldi	r24, 0xC8	; 200
+ 2c0:	90 e0       	ldi	r25, 0x00	; 0
+					LEDShift = (0b00000111 << k) >> 2; //3 bits are shifted using a 16 bit variable; otherwise overflow occurs
+					LEDOutput = LEDShift; //lower byte of 16 bit variable set equal to 8 bit variable for clarity.
+					PORTC = LEDOutput;
+					mTimer2(200);
+				}
+				for(k=8;k>0;k--){
+ 2c2:	00 df       	rcall	.-512    	; 0xc4 <mTimer2>
+ 2c4:	21 e0       	ldi	r18, 0x01	; 1
+ 2c6:	42 1a       	sub	r4, r18
+ 2c8:	51 08       	sbc	r5, r1
+ 2ca:	69 f7       	brne	.-38     	; 0x2a6 <main+0x1c0>
+ 2cc:	81 e0       	ldi	r24, 0x01	; 1
+ 2ce:	68 1a       	sub	r6, r24
+					PORTC = (LEDOutput << k);
+					mTimer2(200);
+				}
+			}
+			//bit shift grouping of 3 LEDs back and forth across display; 2 LEDs pushed off display at extremes.
+			for(i=0;i<2;i++){
+ 2d0:	71 08       	sbc	r7, r1
+ 2d2:	29 f4       	brne	.+10     	; 0x2de <main+0x1f8>
+ 2d4:	06 c0       	rjmp	.+12     	; 0x2e2 <main+0x1fc>
+ 2d6:	68 94       	set
+ 2d8:	66 24       	eor	r6, r6
+ 2da:	61 f8       	bld	r6, 1
+				}
+			}
+			PORTC = 0b00011000;
+			mTimer2(200);
+			PORTC = 0b00000000;
+			mTimer2(200);
+ 2dc:	71 2c       	mov	r7, r1
+ 2de:	28 01       	movw	r4, r16
+					LEDOutput = LEDShift;
+					PORTC = LEDOutput;
+					mTimer2(200);
+				}
+			}
+			PORTC = 0b00000001;
+ 2e0:	cb cf       	rjmp	.-106    	; 0x278 <main+0x192>
+ 2e2:	81 e0       	ldi	r24, 0x01	; 1
+			mTimer2(200);
+ 2e4:	88 b9       	out	0x08, r24	; 8
+ 2e6:	88 ec       	ldi	r24, 0xC8	; 200
+ 2e8:	90 e0       	ldi	r25, 0x00	; 0
+ 2ea:	ec de       	rcall	.-552    	; 0xc4 <mTimer2>
+			//turn-off all LEDs
+			PORTC = 0b00000000;
+ 2ec:	18 b8       	out	0x08, r1	; 8
+			PORTD = 0b00000000;
+ 2ee:	1b b8       	out	0x0b, r1	; 11
+ 2f0:	22 cf       	rjmp	.-444    	; 0x136 <main+0x50>
+
+000002f2 <_exit>:
+ 2f2:	f8 94       	cli
+
+000002f4 <__stop_program>:
+ 2f4:	ff cf       	rjmp	.-2      	; 0x2f4 <__stop_program>
