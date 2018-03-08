@@ -50,6 +50,8 @@ unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
 
 /* Main Routine */
 int main(int argc, char *argv[]){
+	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
+	CLKPR = 0;
 	/*User Variables*/
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0x00;
@@ -73,8 +75,6 @@ int main(int argc, char *argv[]){
 	struct material materialArray[64];
 	/*initializations*/
 	cli(); //disable interrupts
-	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
-	CLKPR = 0;
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM setup;
 	setupISR();
 	setupADC();

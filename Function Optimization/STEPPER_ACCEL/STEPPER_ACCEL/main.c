@@ -50,6 +50,8 @@ unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
 
 /* Main Routine */
 int main(int argc, char *argv[]){
+	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
+	CLKPR = 0;
 	/*User Variables*/
 	//uint8_t stepperSpeed = 0x00;
 	//uint8_t stepperDirection = 0x00; //greater than 0 => clockwise (CW); 0 => counter-clockwise (CCW)
