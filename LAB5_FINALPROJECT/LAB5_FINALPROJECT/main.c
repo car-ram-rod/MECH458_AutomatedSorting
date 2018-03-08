@@ -79,6 +79,7 @@ int main(int argc, char *argv[]){
 	setupISR();
 	setupADC();
 	initTimer1();
+	timer2Init();
 	/*Port I/O Definitions*/
 	DDRA = 0xFF; /* Sets all pins on Port A to output: stepper motor control */
 		/*stepper motor connections to MCU: PA5:0 = EN0, L1, L2, EN1, L3, L4*/
@@ -103,19 +104,21 @@ int main(int argc, char *argv[]){
 	while(1){
 		if(opt1Flag){
 			opt1Flag=0x00; //reset flag
-			ADCSRA |= _BV(ADSC); //initialize the ADC
+			OIOR_Count+=1; //add one to amount of objects between optical sensors 1 and 2
+			//initialize an ADC conversion if it is the first object to be 
+			if(OIOR_Count==1) ADCSRA |= _BV(ADSC); 		
 			OI_Count+=1; //add one to amount of objects unsorted
-			OIOR_Count+=1;
 		} 
-		if(ADCResultFlag && OIOR_Count>0){ //if an ADC conversion is complete and there is an object between optical sensors 1 and 2
+		if((ADCResultFlag>0) && (OIOR_Count>0)){ //if an ADC conversion is complete and there is an object between optical sensors 1 and 2
 			ADCResultFlag=0; //reset flag
+			
 			if(ADCResult>oldADCResult){ //reflectivity is increasing still
 				oldADCResult=ADCResult;
-			}else if((ADCResult<0x04) && (ADCResult<oldADCResult)){ //minimal to no reflection AND reflectivities have been reducing	
+			}else if((ADCResult<0x0C) && ((ADCResult+0x0C)<oldADCResult)){ //minimal to no reflection AND reflectivities have been reducing (buffer introduced)
 				tempReflArray[RL_Count]=oldADCResult;//value of oldADCResult is added to a temporary array
 				RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
 				oldADCResult=0x00;//reset oldADCResult to 0 for the next objects reflectivites to be measured
-			}
+			}	
 			ADCSRA |= _BV(ADSC); //re-trigger ADC
 		} else ADCResultFlag=0; //reset flag
 		if(opt2Flag){
@@ -231,7 +234,7 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	return; //returns nothing
 }
 void stepperHome(int *stepperPos, int *stepperIt){
-	uint8_t delay = 20; //20ms corresponds to 50 steps per second
+	uint8_t delay = 30; //20ms corresponds to 50 steps per second
 	int i=0;
 	int x=0;
 	uint8_t offset=8; //arbitrary at this point
@@ -239,7 +242,7 @@ void stepperHome(int *stepperPos, int *stepperIt){
 	PORTA=0x00;
 	while (HallEffect==0){
 		PORTA = stepperSigOrd[i];
-		mTimer(delay);
+		mTimer2(delay);
 		i++;
 		if (i==4)i=0;
 	}
@@ -250,7 +253,7 @@ void stepperHome(int *stepperPos, int *stepperIt){
 		if (i==4)i=0;
 		if (i==-1)i=3;
 		PORTA = stepperSigOrd[i];
-		mTimer(delay);
+		mTimer2(delay);
 	}
 	//
 	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
@@ -269,8 +272,9 @@ void setupPWM(int motorDuty){
 }
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
-	//rising edge on INT2: EICRA |= _BV(ISC21) | _BV(ISC20);
-	//falling edge on INT2: EICRA |= _BV(ISC21);
+	//Ex: rising edge on INT2: EICRA |= _BV(ISC21) | _BV(ISC20);
+	//Ex: falling edge on INT2: EICRA |= _BV(ISC21);
+	//see ISR routines for 
 	EIMSK |=0b01011111; //initialize INT6,4:0
 	EICRA |= 0b10111010; //rising edge on INT2; falling edge detection on INT0
 	EICRB |= 0b00100010; //active low for INT6 and INT4
@@ -297,17 +301,17 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 ISR(INT0_vect){ // on PD0; active low KILL SWITCH
 	PORTB &= 0b11110000; //stop motor by applying Vcc break
 }
-/*sensor 1: OI: 1st Optical-Inductive-Near Reflective sensor*/
+/*sensor 4: IN: Inductive sensor*/ 
 ISR(INT1_vect){ // on PD1; active low
-	opt1Flag=0x01;
+	inductiveFlag=0x01;
 }
 /*sensor 3: OR: 2nd Optical-Reflective-Near Inductive sensor*/
 ISR(INT2_vect){ // on PD2; active high
 	opt2Flag=0x01;
 }
-/*sensor 4: IN: Inductive sensor*/
+/*sensor 1: OI: 1st Optical-Inductive-Near Reflective sensor*/
 ISR(INT3_vect){ //on PD3; active low
-	inductiveFlag=0x01;
+	opt1Flag=0x01;
 }
 /*sensor 5: EX: 3rd Optical-Near exit of conveyor*/
 ISR(INT4_vect){ //on PE4; active low

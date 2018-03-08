@@ -33,13 +33,15 @@ void mTimer(int count){ // delay microsecond
 /*at a clock frequency of 8MHz this is a 1.024ms timer for each while loop cycle*/
 /*e.g. (32/8MHz)x(0xFF=256)=0.001024s=1.024ms*/
 void timer2Init(void){
-	TIMSK2 |= _BV(TOIE2); //enable Timer/Counter 2 Overflow interrupt; sets TOV2 bit in TIFR2 register upon overflow
+	//sei(); enables all interrupts thus following is unneccessary 
+	//TIMSK2 |= _BV(TOIE2); //enable Timer/Counter 2 Overflow interrupt; sets TOV2 bit in TIFR2 register upon overflow
 	TCCR2A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV2 flag
 	//TOP=0xFF; Update is immediate
-	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
+	//TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32); starts timer
 }
 void mTimer2(int count){
 	int i=0;
+	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
 	TCNT2=0x00; //set timer equal to zero
 	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
 	while (i<count){ //iterate through given count
@@ -49,4 +51,5 @@ void mTimer2(int count){
 			//equivalent; TIFR2 |= _BV(TOV2)
 		}
 	}
+	TCCR2B&=0b11111000; //disable timer 2
 }
