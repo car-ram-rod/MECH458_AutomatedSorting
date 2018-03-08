@@ -174,7 +174,8 @@ int main(int argc, char *argv[]){
 void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
-	uint8_t maxDelay = 20; //20ms corresponds to 50 steps per second
+	int k=0;
+	uint8_t maxDelay = 22; //20ms corresponds to 50 steps per second
 	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
 	uint8_t delay = maxDelay;
@@ -189,13 +190,19 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	if (steps > 0) DIRECTION = 1;// positive or clock-wise
 	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise
 	
-	//CURRENT_ITERATION = offset + DIRECTION;//saves some math later during "for" loop
+	/*perform one stepper cycle before "for" loop so there is no wasted delay at
+	beginning or end of stepper motion*/
+	PORTAREGSet+=DIRECTION;
+	if(PORTAREGSet==4)PORTAREGSet=0;
+	if(PORTAREGSet==-1)PORTAREGSet=3;
 	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
-	for(i=1;i<=absSteps;i++){		
-		TCNT2=0x00; //set timer equal to zero
-		if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, 
+	TCNT2=0x00; //set timer equal to zero; note timer is already counting based on clock prescalar
+	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset it to zero
+	PORTA = stepperSigOrd[PORTAREGSet];//initialize first step
+	for(i=2;i<=absSteps;i++){
+		
 		//ramp up
-		if((absSteps-i-1) > differential){ //the "added" negative one causes it to slow down one step early
+		if((absSteps-i) > differential){ //the "added" negative one causes it to slow down one step early
 			if(delay>minDelay)delay -= 1;
 			else delay = minDelay;
 		} else { //ramp down if the amount of steps left are less than the differential between max and min delays
@@ -206,15 +213,15 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 		PORTAREGSet+=DIRECTION;
 		if(PORTAREGSet==4)PORTAREGSet=0;
 		if(PORTAREGSet==-1)PORTAREGSet=3;
-		//PORTAREGSet = ((stepperIteration+DIRECTION*i)%4);
-		PORTA = stepperSigOrd[PORTAREGSet];
-		while (i<delay){ //iterate through given count
+		k=0; //reset counter for timer
+		while (k<delay){ //iterate through given count
 			if ((TIFR2 & 0x01) == 0x01){ //if overflow has occurred in counter
 				TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit
-				i+=1;
+				k+=1;
 				//equivalent; TIFR2 |= _BV(TOV2)
 			}
 		}
+		PORTA = stepperSigOrd[PORTAREGSet];//move stepper after first delay
 	}
 	TCCR2B&=0b11111000; //disable timer 2
 	*stepperIt=PORTAREGSet;
