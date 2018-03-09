@@ -167,8 +167,8 @@ int main(int argc, char *argv[]){
 /*function allows control of direction and quantity of steps to */
 void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	/*function variable declarations*/
-	int i=0;
-	int k=0;
+	int i=0; //step quantity
+	int k=0; //timer counter
 	uint8_t maxDelay = 22; //20ms corresponds to 50 steps per second
 	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
 	uint8_t differential = maxDelay - minDelay;
@@ -176,14 +176,13 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	int PORTAREGSet = *stepperIt;
 	int DIRECTION = 1;
 	uint16_t absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
-	if(absSteps<(differential*2)){
+	if(absSteps<(differential*2)){ //if there isn't enough time for stepper to fully ramp up to full speed
 		minDelay=maxDelay-absSteps/2;
 		differential = maxDelay - minDelay;
 	}
 	//determine direction 
 	if (steps > 0) DIRECTION = 1;// positive or clock-wise
-	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise
-	
+	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise	
 	/*perform one stepper cycle before "for" loop so there is no wasted delay at
 	beginning or end of stepper motion*/
 	PORTAREGSet+=DIRECTION;
@@ -193,10 +192,9 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	TCNT2=0x00; //set timer equal to zero; note timer is already counting based on clock prescalar
 	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset it to zero
 	PORTA = stepperSigOrd[PORTAREGSet];//initialize first step
-	for(i=2;i<=absSteps;i++){
-		
+	for(i=2;i<=absSteps;i++){	
 		//ramp up
-		if((absSteps-i) > differential){ //the "added" negative one causes it to slow down one step early
+		if((absSteps-i) > (differential+1)){ //the "added" one causes it to slow down one step early
 			if(delay>minDelay)delay -= 1;
 			else delay = minDelay;
 		} else { //ramp down if the amount of steps left are less than the differential between max and min delays

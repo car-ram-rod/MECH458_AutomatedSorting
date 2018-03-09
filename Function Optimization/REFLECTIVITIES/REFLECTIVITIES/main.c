@@ -35,7 +35,7 @@ void mTimer2(int count);
 #define DC_BRAKE 0x00 //dc motor brake
 #define CONVEYOR_SPEED 30 //50 is maximum for sustainability
 /*Global Variables*/
-volatile unsigned char ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
+volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
 volatile unsigned char ADC_RESET;
 
@@ -58,9 +58,23 @@ int main(void){
 	while (1){
 		if ((ADCResultFlag) && (ADCResult>(oldADCResult+0x05))){
 			oldADCResult=ADCResult;
-			PORTC=oldADCResult;
+			PORTC=(oldADCResult & 0x00FF);
+			PORTD=((oldADCResult & 0x0100) >> 3); //D2=GREEN when set (9th bit of ADC value)
+			PORTD=((oldADCResult & 0x0200) >> 2); //D5=RED when set (10th bit of ADC value)
+			
 			ADCResultFlag=0x00;
 			ADCSRA |= _BV(ADSC);
+			
+			/*PORTD = 0b10100000; //D5=Red; D2=Green
+			mTimer(1000);
+			PORTD = 0b01010000; //D5=Green; D2=Red
+			mTimer(1000);
+			PORTD = 0b11110000; //D5=Yellow; D2=Yellow
+			mTimer(1000);
+			PORTD = 0b10010000; //D5=Red; D2=Red
+			mTimer(1000);	
+			PORTD = 0b01100000; //D5=Green; D2=Green
+			mTimer(1000);*/
 		}
 		//mTimer(10) //--ODA Edit;Does mTimer break with other interrupts engaged?
 		if (ADC_RESET){
@@ -90,7 +104,7 @@ void setupISR(void){
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
-	ADMUX |= _BV(REFS0) | _BV(MUX0) | _BV(ADLAR); //AVcc reference (3.3V);read from ADC 1;output left-adjusted
+	ADMUX |= _BV(REFS0) | _BV(MUX0); //AVcc reference (3.3V);read from ADC 1;output right-adjusted
 	ADMUX &= 0b11100001; //reading from PF1 (ADC1); ADC0 works, but MCU has thermistor on pin...
 	//PORTF &= 0b11111110;
 }
@@ -162,16 +176,14 @@ ISR(INT2_vect){ //unused --ODA
 	ADCSRA |= _BV(ADSC);
 }
 ISR(ADC_vect){ //ADCResult is left-adjusted (i.e. the upper most byte is taken; 2 LSB' are discarded)
-	ADCResult = ADCH;
+	ADCResult = ADCL;
+	ADCResult += ADCH << 8;
 	ADCResultFlag = 1;
 }
 ISR(INT6_vect){
 	int i;
 	ADC_RESET=1;
 	//bad practice, but good for demonstration purposes
-	for(i=0;i<1000;i++){}//arbitrary delay (allow button to settle)
-	//mTimer(25);
-	while((PINE & 0b01000000)==0b01000000){ //while switch is still pressed
-		for(i=0;i<1000;i++){}//arbitrary delay
-	}
+	mTimer2(25); //debounce period
+	while((PINE & 0b01000000)==0b01000000)mTimer2(2); //while switch is still pressed
 }
