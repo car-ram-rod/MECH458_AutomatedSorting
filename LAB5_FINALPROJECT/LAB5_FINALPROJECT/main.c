@@ -61,10 +61,11 @@ int main(int argc, char *argv[]){
 	int RL_Count = 0x00; //count of objects that have had their reflectivities quantified
 	int OR_Count = 0x00; //count of objects that have hit optical sensor 2 (OR)
 	int EX_Count = 0x00; //count of objects that have hit optical sensor 3 (EX)
-	int OIOR_Count = 0x00; //count of objects between optical sensors 1 and 2
-	uint16_t tempReflArray[8];
-	uint8_t tempType=0;
+	//int OIOR_Count = 0x00; //count of objects between optical sensors 1 and 2
+	//int OIEX_Count = 0x00; //count of objects between optical sensors 1 and 3 (Exit sensor)
+	uint8_t tempIndArray[64]= {0};
 	uint8_t tempFerrous=0;
+	uint8_t startMeasureFlag=0x00; //allows the ADC conversions to stop if no object is in front of RL sensor
 	//initialize structure to store material characteristics
 	typedef struct material{
 		uint16_t reflectance; //10 bit value
@@ -92,60 +93,29 @@ int main(int argc, char *argv[]){
 	// PORTB &= 0b1110000; //apply Vcc brake to motor
 	//PORTB |=0b1000; //start motor in specified direction
 	HallEffect=0x00; //set HallEffect equal to zero so while loop is continuous until break out
-	stepperHome(&stepperPosition,&stepperIteration);
-	
 	/*initialize flags and counters*/
 	opt1Flag=0x00;
 	opt2Flag=0x00;
 	inductiveFlag=0x00;
 	optExitFlag=0x00;
-	
+	ADCResultFlag=0x00;	
+	stepperHome(&stepperPosition,&stepperIteration); //home stepper
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	while(1){
-		if(opt1Flag){
+		if(opt1Flag){ //triggered on a rising edge for an active low signal (i.e. when the object has just passed optical sensor 1)
 			opt1Flag=0x00; //reset flag
-			OIOR_Count+=1; //add one to amount of objects between optical sensors 1 and 2
-			//initialize an ADC conversion if it is the first object to be 
-			if(OIOR_Count==1) ADCSRA |= _BV(ADSC); 		
-			OI_Count+=1; //add one to amount of objects unsorted
-		} 
-		if((ADCResultFlag>0) && (OIOR_Count>0)){ //if an ADC conversion is complete and there is an object between optical sensors 1 and 2
-			ADCResultFlag=0; //reset flag
-			
-			if(ADCResult>oldADCResult){ //reflectivity is increasing still
-				oldADCResult=ADCResult;
-			}else if((ADCResult<0x0C) && ((ADCResult+0x0C)<oldADCResult)){ //minimal to no reflection AND reflectivities have been reducing (buffer introduced)
-				tempReflArray[RL_Count]=oldADCResult;//value of oldADCResult is added to a temporary array
-				RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
-				oldADCResult=0x00;//reset oldADCResult to 0 for the next objects reflectivites to be measured
-			}	
-			ADCSRA |= _BV(ADSC); //re-trigger ADC
-		} else ADCResultFlag=0; //reset flag
+			OI_Count+=1; //add one to amount of objects that have passed optical sensor 1
+		}
+		if (inductiveFlag){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
+			inductiveFlag=0x00; //reset flag
+			if (OI_Count) tempIndArray[OI_Count-1]=0x01; //set temporary inductive array equal to 1 for object based on OI_Count
+			else tempIndArray[63]=0x01; //special case occurs on roll-over of counters when OI_Count==0; occurs as we are minusing 1 from count
+		}
 		if(opt2Flag){
 			opt2Flag=0x00; //reset flag
-			if(inductiveFlag){ //object is metal: aluminum (light), steel (dark)
-				inductiveFlag=0x00;
-				tempFerrous=1;
-				//based on reflectivity, make an objective decision
-				if (tempReflArray[OR_Count]>AL_REFLECTIVITY){
-					tempType=150;//object is aluminum
-					} else {
-					tempType=50;//object is steel
-				}
-			} else { //object is plastic: white (light), black (dark)
-				tempFerrous=0;
-				if (tempReflArray[OR_Count]>WH_REFLECTIVITY){
-					tempType=100;//object is white plastic
-					} else {
-					tempType=0;//object is black plastic
-				}
-			}
-			//add reflectivity, object type (black=0;aluminum=50;white=100;steel=150), and ferrousity (made-up word ':)') of object to structure
-			materialArray[OR_Count].reflectance=tempReflArray[OR_Count];//unneccesary, but for completeness it exists
-			materialArray[OR_Count].inductive=tempFerrous;
-			materialArray[OR_Count].type=tempType;
 			OR_Count+=1;
-			OIOR_Count-=1; //decrement count of objects between optical sensors 1 and 2
+			ADCSRA |= _BV(ADSC); //initialize an ADC conversion
+			startMeasureFlag=0x01;//allow ADC conversions to continue
 		}
 		if(optExitFlag){ //object has hit sensor at end of conveyor
 			optExitFlag=0x00; //reset flag
@@ -160,14 +130,35 @@ int main(int argc, char *argv[]){
 				else if (stepperMovement== 100) stepperMovement=-100; //counter-clockwise is more efficient for particular stepper
 				stepperControl(stepperMovement, &stepperPosition, &stepperIteration);//rotate stepper to proper location
 				PORTB |=0b00001000; //start motor forwards
-			}		
+			}
 			EX_Count+=1;
 		}
-	//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
-	OI_Count &= 0b00111111;
-	RL_Count &= 0b00111111;
-	OR_Count &= 0b00111111;
-	EX_Count &= 0b00111111;
+		if((ADCResultFlag) && (startMeasureFlag)){ //if an ADC conversion is complete
+			ADCResultFlag=0; //reset flag to allow interrupt to be triggered right away if necessary
+			if(ADCResult>(oldADCResult+0x0A)) oldADCResult=ADCResult; //reflectivity is increasing still (buffer implemented of 10(0x0A))
+			else if((ADCResult+0x3B)<oldADCResult){ //reflectivities have been reducing and are 59(0x3B) lower than maximum reflectivity reached(buffer)
+				materialArray[RL_Count].reflectance=oldADCResult;//value of oldADCResult is now maximum possible reflectivity and is added to struct array
+				tempFerrous=tempIndArray[RL_Count]; //store whether object was ferrous or non-ferrous
+				tempIndArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
+				materialArray[RL_Count].inductive=tempFerrous;//inductivity of material stored; 1 for inductive; 0 for non-ferrous
+				if(tempFerrous){ //object is metal: aluminum (light), steel (dark)
+					if (oldADCResult>AL_REFLECTIVITY) materialArray[RL_Count].type=150;//object is aluminium
+					else materialArray[RL_Count].type=50;//object is steel
+					} else { //object is plastic: white (light), black (dark)
+					if (oldADCResult>WH_REFLECTIVITY) materialArray[RL_Count].type=100;//object is white plastic
+					else materialArray[RL_Count].type=0;//object is black plastic
+				}
+				RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
+				oldADCResult=0x00;//reset oldADCResult to 0 for the next objects reflectivites to be measured
+				startMeasureFlag=0x00; //set flag to zero so ADC conversions cannot occur
+			}
+			ADCSRA |= _BV(ADSC); //re-trigger ADC
+		} else ADCResultFlag=0;
+		//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
+		OI_Count &= 0b00111111;
+		RL_Count &= 0b00111111;
+		OR_Count &= 0b00111111;
+		EX_Count &= 0b00111111;
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
@@ -276,7 +267,7 @@ void setupISR(void){
 	//Ex: falling edge on INT2: EICRA |= _BV(ISC21);
 	//see ISR routines for 
 	EIMSK |=0b01011111; //initialize INT6,4:0
-	EICRA |= 0b10111010; //rising edge on INT2; falling edge detection on INT0
+	EICRA |= 0b11101110; //rising edge triggers for INT1 (OI) and INT3 (OR); falling edge detection on INT2 (IN) and INT4 (EX)
 	EICRB |= 0b00100010; //active low for INT6 and INT4
 }
 void setupADC(void){
@@ -301,20 +292,20 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 ISR(INT0_vect){ // on PD0; active low KILL SWITCH
 	PORTB &= 0b11110000; //stop motor by applying Vcc break
 }
-/*sensor 4: IN: Inductive sensor*/ 
-ISR(INT1_vect){ // on PD1; active low
-	inductiveFlag=0x01;
-}
-/*sensor 3: OR: 2nd Optical-Reflective-Near Inductive sensor*/
-ISR(INT2_vect){ // on PD2; active high
-	opt2Flag=0x01;
-}
-/*sensor 1: OI: 1st Optical-Inductive-Near Reflective sensor*/
-ISR(INT3_vect){ //on PD3; active low
+/*sensor 1: OI: 1st Optical-Inductive-Near Inductive sensor*/
+ISR(INT1_vect){ // on PD1; active low; triggered on rising-edge
 	opt1Flag=0x01;
 }
+/*sensor 2: IN: Inductive sensor*/
+ISR(INT2_vect){ //on PD3; active low; triggered on falling-edge
+	inductiveFlag=0x01;
+}
+/*sensor 3: OR: 2nd Optical-Reflective-Near Reflective sensor*/
+ISR(INT3_vect){ // on PD2; active high; triggered on rising-edge
+	opt2Flag=0x01;
+}
 /*sensor 5: EX: 3rd Optical-Near exit of conveyor*/
-ISR(INT4_vect){ //on PE4; active low
+ISR(INT4_vect){ //on PE4; active low; triggered on falling-edge
 	optExitFlag=0x01;
 }
 /*sensor 6: HE: Hall Effect sensor; used for homing stepper*/

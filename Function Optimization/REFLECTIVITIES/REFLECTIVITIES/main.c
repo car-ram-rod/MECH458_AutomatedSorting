@@ -24,7 +24,9 @@ void setupISR(void);
 void setupADC(void);
 void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0->100), direction possibilities {0b11,0b10,0b01,0b00}
 void initTimer1(void);
+void timer2Init(void);
 void mTimer(int count);
+void mTimer2(int count);
 /*User Defines*/
 #define highNibMask 0xF0
 #define lowNibMask 0x0F
@@ -54,7 +56,7 @@ int main(void){
 	motorControl(CONVEYOR_SPEED,DC_FORWARD); //start conveyor towards stepper
 	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
 	while (1){
-		if ((ADCResultFlag!=0) && (ADCResult>oldADCResult)){
+		if ((ADCResultFlag) && (ADCResult>(oldADCResult+0x05))){
 			oldADCResult=ADCResult;
 			PORTC=oldADCResult;
 			ADCResultFlag=0x00;
@@ -66,6 +68,7 @@ int main(void){
 			ADC_RESET=0x00;
 			PORTC=0x00;
 		}
+		mTimer2(5); //delay as if in rest of normal while loop
 	}
 	return (0); //This line returns a 0 value to the calling program
 }
@@ -73,15 +76,17 @@ void setupPWM(int motorDuty){
 	uint8_t dutyCycle = 0;
 	/*DC MOTOR PWM SETUP (runs conveyor)*/
 	TCCR0A |= _BV(WGM00) | _BV(WGM01) | _BV(COM0A1); /*set to Fast PWM; OCRx updated at TOP; TOV set on MAX; Clear OC0A on Compare Match, set OC0A at TOP*/
-	TCCR0B |= _BV(CS01);//Set clock pre-scalar (1MHz*1/8): 488Hz measured on PB7*
+	TCCR0B |= _BV(CS01) | _BV(CS00);//Set clock pre-scalar (8MHz*1/64): 488Hz measured on PB7*
+	//TCCR0B &= 0b11111101;
 	dutyCycle = motorDuty*2.55;
 	OCR0A = dutyCycle;//set duty cycle/start motor
 	PORTB &= 0xF0; //Apply Vcc brake to conveyor
 }
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
-	//EIMSK |= _BV(INT2); //enable INT2
+	EIMSK |= _BV(INT6); //enable INT6
 	//EICRA |= _BV(ISC21) | _BV(ISC20); //rising edge interrupt; EICRA determines INT3:0
+	EICRB |= _BV(ISC61); //falling edge
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
@@ -110,6 +115,13 @@ void initTimer1 (void){ //initialize Timer 1 for CTC (Clear Timer on Compare)
 	/*set the initial value of the Timer rCounter to 0x0000*/
 	TCNT1 = 0x0000;
 }
+void timer2Init(void){ //clock is turned on during interval of use and then off when unused
+	//sei(); enables all interrupts thus following is unneccessary
+	//TIMSK2 |= _BV(TOIE2); //enable Timer/Counter 2 Overflow interrupt; sets TOV2 bit in TIFR2 register upon overflow
+	TCCR2A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV2 flag
+	//TOP=0xFF; Update is immediate
+	//TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32); starts timer
+}
 void mTimer(int count){ // delay microsecond
 	int i = 0; //initialize loop counter
 	/*Enable the output compare interrupt enable*/
@@ -129,7 +141,20 @@ void mTimer(int count){ // delay microsecond
 	TCCR1B &= 0b11111000; //shut off timer 1
 	return;
 } //mTimer
-
+void mTimer2(int count){
+	int i=0;
+	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
+	TCNT2=0x00; //set timer equal to zero
+	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
+	while (i<count){ //iterate through given count
+		if ((TIFR2 & 0x01) == 0x01){ //if overflow has occurred in counter
+			TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit
+			i+=1;
+			//equivalent; TIFR2 |= _BV(TOV2)
+		}
+	}
+	TCCR2B&=0b11111000; //disable timer 2
+}
 /**********INTERRUPT SERVICE ROUTINES**********/
 /*sensor 3: 2nt Optical Inductive, Active HIGH starts AD conversion*/
 ISR(INT2_vect){ //unused --ODA
