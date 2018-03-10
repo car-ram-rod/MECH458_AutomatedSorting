@@ -15,7 +15,7 @@
 #include <avr/io.h>// the header of i/o port
 #include <avr/interrupt.h>
 #include <math.h>
-#include "LinkedQueue.h"
+//#include "LinkedQueue.h"
 #include "interrupt.h"
 
 /*Function Declarations*/
@@ -39,13 +39,15 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define BL_REFLECTIVITY 400 //minimum reflectivity of black plastic
 
 /*Global Variables*/
+
 volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
-volatile unsigned int ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
+volatile unsigned int systemFlag; //bits(4:0) = {ADCResultFlag,optExitFlag,opt2Flag,inductiveFlag,opt1Flag}
+//volatile unsigned int opt1Flag; //set when 1st optical sensor is triggered (OI sensor)
+//volatile unsigned int inductiveFlag; //an inductive flag is picked up
+//volatile unsigned int opt2Flag; //set when 2nd optical sensor is triggered (OR sensor)
+//volatile unsigned int optExitFlag; //object is at end of conveyor
+//volatile unsigned int ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
 volatile unsigned int HallEffect; //becomes set during stepper homing to know position
-volatile unsigned int opt1Flag; //set when 1st optical sensor is triggered (OI sensor)
-volatile unsigned int opt2Flag; //set when 2nd optical sensor is triggered (OR sensor)
-volatile unsigned int optExitFlag; //object is at end of conveyor
-volatile unsigned int inductiveFlag; //an inductive flag is picked up
 unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
 
 /* Main Routine */
@@ -92,33 +94,34 @@ int main(int argc, char *argv[]){
 	sei(); //enable interrupts
 	// PORTB &= 0b1110000; //apply Vcc brake to motor
 	//PORTB |=0b1000; //start motor in specified direction
-	HallEffect=0x00; //set HallEffect equal to zero so while loop is continuous until break out
 	/*initialize flags and counters*/
-	opt1Flag=0x00;
-	opt2Flag=0x00;
-	inductiveFlag=0x00;
-	optExitFlag=0x00;
-	ADCResultFlag=0x00;	
+	systemFlag=0x0000;
+	//opt1Flag=0x00;
+	//opt2Flag=0x00;
+	//inductiveFlag=0x00;
+	//optExitFlag=0x00;
+	//ADCResultFlag=0x00;	
+	HallEffect=0x00; 
 	stepperHome(&stepperPosition,&stepperIteration); //home stepper
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	while(1){
-		if(opt1Flag){ //triggered on a rising edge for an active low signal (i.e. when the object has just passed optical sensor 1)
-			opt1Flag=0x00; //reset flag
+		if(systemFlag&0x01){ //triggered on a rising edge for an active low signal (i.e. when the object has just passed optical sensor 1)
+			systemFlag&=0xFE; //reset flag
 			OI_Count+=1; //add one to amount of objects that have passed optical sensor 1
 		}
-		if (inductiveFlag){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
-			inductiveFlag=0x00; //reset flag
+		if (systemFlag&0x02){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
+			systemFlag&=0xFD; //reset flag
 			if (OI_Count) tempIndArray[OI_Count-1]=0x01; //set temporary inductive array equal to 1 for object based on OI_Count
 			else tempIndArray[63]=0x01; //special case occurs on roll-over of counters when OI_Count==0; occurs as we are minusing 1 from count
 		}
-		if(opt2Flag){
-			opt2Flag=0x00; //reset flag
+		if(systemFlag&0x04){
+			systemFlag&=0xFB; //reset flag
 			OR_Count+=1;
 			ADCSRA |= _BV(ADSC); //initialize an ADC conversion
 			startMeasureFlag=0x01;//allow ADC conversions to continue
 		}
-		if(optExitFlag){ //object has hit sensor at end of conveyor
-			optExitFlag=0x00; //reset flag
+		if(systemFlag&0x08){ //object has hit sensor at end of conveyor
+			systemFlag&=0xF7; //reset flag
 			//corresponding positions (black=0;aluminum=50;white=100;steel=150)
 			//if object type matches stepper location; do nothing...
 			stepperMovement=stepperPosition-materialArray[EX_Count].type;
@@ -133,8 +136,8 @@ int main(int argc, char *argv[]){
 			}
 			EX_Count+=1;
 		}
-		if((ADCResultFlag) && (startMeasureFlag)){ //if an ADC conversion is complete
-			ADCResultFlag=0; //reset flag to allow interrupt to be triggered right away if necessary
+		if((systemFlag&0x10) && (startMeasureFlag)){ //if an ADC conversion is complete
+			systemFlag&=0xEF; //reset flag to allow interrupt to be triggered right away if necessary
 			if(ADCResult>(oldADCResult+0x0A)) oldADCResult=ADCResult; //reflectivity is increasing still (buffer implemented of 10(0x0A))
 			else if((ADCResult+0x3B)<oldADCResult){ //reflectivities have been reducing and are 59(0x3B) lower than maximum reflectivity reached(buffer)
 				materialArray[RL_Count].reflectance=oldADCResult;//value of oldADCResult is now maximum possible reflectivity and is added to struct array
@@ -153,7 +156,7 @@ int main(int argc, char *argv[]){
 				startMeasureFlag=0x00; //set flag to zero so ADC conversions cannot occur
 			}
 			ADCSRA |= _BV(ADSC); //re-trigger ADC
-		} else ADCResultFlag=0;
+		} else systemFlag&=0xEF;
 		//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
 		OI_Count &= 0b00111111;
 		RL_Count &= 0b00111111;
@@ -229,13 +232,14 @@ void stepperHome(int *stepperPos, int *stepperIt){
 	uint8_t offset=8; //arbitrary at this point
 	uint8_t DIRECTION=1; //1 for clockwise, -1 for counter-clockwise
 	PORTA=0x00;
-	while (HallEffect==0){
+	while (!HallEffect){ //continue to move while Hall Effect flag hasn't been set
 		PORTA = stepperSigOrd[i];
 		mTimer2(delay);
 		i++;
 		if (i==4)i=0;
-	}
+	}	
 	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6)
+	//HallEffect=0x00; //reset flag
 	/*Insert code here to compensate for offset*/
 	for (x=0;x<offset;x++){
 		i+=DIRECTION;
@@ -292,31 +296,32 @@ ISR(INT0_vect){ // on PD0; active low KILL SWITCH
 }
 /*sensor 1: OI: 1st Optical-Inductive-Near Inductive sensor*/
 ISR(INT1_vect){ // on PD1; active low; triggered on rising-edge
-	opt1Flag=0x01;
+	systemFlag|=0x01;//opt1Flag=0x01;
 }
 /*sensor 2: IN: Inductive sensor*/
 ISR(INT2_vect){ //on PD3; active low; triggered on falling-edge
-	inductiveFlag=0x01;
+	systemFlag|=0x02;//inductiveFlag=0x01;
 }
 /*sensor 3: OR: 2nd Optical-Reflective-Near Reflective sensor*/
 ISR(INT3_vect){ // on PD2; active high; triggered on rising-edge
-	opt2Flag=0x01;
+	systemFlag|=0x04;//opt2Flag=0x01;
 }
 /*sensor 5: EX: 3rd Optical-Near exit of conveyor*/
 ISR(INT4_vect){ //on PE4; active low; triggered on falling-edge
-	optExitFlag=0x01;
+	systemFlag|=0x08;//optExitFlag=0x01;
+}
+/*ADC ISR: triggered when ADC is completed*/
+ISR(ADC_vect){
+	ADCResult = ADCL;
+	ADCResult += ADCH << 8;
+	systemFlag|=0x10;//ADCResultFlag = 1;
 }
 /*sensor 6: HE: Hall Effect sensor; used for homing stepper*/
 ISR(INT6_vect){ //on PE6; Active low for hall effect sensor 
 	HallEffect=0x01;
 }
 
-/*ADC ISR: triggered when ADC is completed*/
-ISR(ADC_vect){
-	ADCResult = ADCL;
-	ADCResult += ADCH << 8;
-	ADCResultFlag = 1;
-}
+
 
 
 
