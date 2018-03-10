@@ -30,18 +30,21 @@ void mTimer2(int count);
 /*User Defines*/
 #define highNibMask 0xF0
 #define lowNibMask 0x0F
-#define DC_REVERSE 0x02 	//dc motor clock-wise
-#define DC_FORWARD 0x01	//dc motor counter-clockwise
+#define DC_REVERSE 0x01 		//dc motor counter-clockwise
+#define DC_FORWARD 0x02			//dc motor clock-wise
 #define DC_BRAKE 0x00 //dc motor brake
 #define CONVEYOR_SPEED 30 //50 is maximum for sustainability
 /*Global Variables*/
-volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
+volatile unsigned int ADCResult; //16 bits: 0 => (2^9-1); stores result of ADC conversion
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
 volatile unsigned char ADC_RESET;
+volatile unsigned char OPT2FLAG;
 
 /*Beginning of main program*/
 int main(void){
-	uint8_t oldADCResult=0x00;
+	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
+	CLKPR = 0;
+	uint16_t oldADCResult=0x03FF;
 	cli(); //disable all interrupts
 	initTimer1();
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM
@@ -53,18 +56,31 @@ int main(void){
 	DDRF = 0x00; /*PF1=ADC1 pin*/
 	sei(); //enable all interrupts
 	PORTB &= 0b11110000; //apply brake to Vcc
-	motorControl(CONVEYOR_SPEED,DC_FORWARD); //start conveyor towards stepper
-	ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
+	PORTC=0b10101010;
+	mTimer2(2000);
+	PORTC=0b00000000;
+	mTimer2(2000);
+	motorControl(40,DC_FORWARD); //start conveyor towards stepper
+	ADC_RESET=0;
+	OPT2FLAG=0;
+	ADCResultFlag=0;
+
 	while (1){
-		if ((ADCResultFlag) && (ADCResult>(oldADCResult+0x05))){
-			oldADCResult=ADCResult;
-			PORTC=(oldADCResult & 0x00FF);
-			PORTD=((oldADCResult & 0x0100) >> 3); //D2=GREEN when set (9th bit of ADC value)
-			PORTD=((oldADCResult & 0x0200) >> 2); //D5=RED when set (10th bit of ADC value)
-			
+		if (ADCResultFlag){
+			if (ADCResult<(oldADCResult)){
+				oldADCResult=ADCResult;
+				PORTC=(oldADCResult & 0x00FF); //bits 7:0
+				PORTD=((oldADCResult & 0x0100) >> 3); //D2=GREEN when set (8th bit of ADC value)
+				PORTD|=((oldADCResult & 0x0200) >> 2); //D5=RED when set (9th bit of ADC value)
+;
+			} else if (ADCResult>(oldADCResult+50)){
+				oldADCResult=0xFFFF;
+				mTimer2(20001);
+				PORTC=0x00;
+				PORTD&=0x0F;
+			}
 			ADCResultFlag=0x00;
-			ADCSRA |= _BV(ADSC);
-			
+			ADCSRA |= _BV(ADSC);	
 			/*PORTD = 0b10100000; //D5=Red; D2=Green
 			mTimer(1000);
 			PORTD = 0b01010000; //D5=Green; D2=Red
@@ -76,13 +92,18 @@ int main(void){
 			PORTD = 0b01100000; //D5=Green; D2=Green
 			mTimer(1000);*/
 		}
+		if (OPT2FLAG){
+			OPT2FLAG=0x00;
+			ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
+		}
 		//mTimer(10) //--ODA Edit;Does mTimer break with other interrupts engaged?
 		if (ADC_RESET){
-			oldADCResult=0x00;
+			oldADCResult=0xFFFF;
 			ADC_RESET=0x00;
 			PORTC=0x00;
+			PORTD&=0x0F;
 		}
-		mTimer2(5); //delay as if in rest of normal while loop
+		//mTimer2(5); //delay as if in rest of normal while loop
 	}
 	return (0); //This line returns a 0 value to the calling program
 }
@@ -98,8 +119,8 @@ void setupPWM(int motorDuty){
 }
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
-	EIMSK |= _BV(INT6); //enable INT6
-	//EICRA |= _BV(ISC21) | _BV(ISC20); //rising edge interrupt; EICRA determines INT3:0
+	EIMSK |= _BV(INT6) |_BV(INT2); //enable INT6
+	EICRA |= _BV(ISC21) | _BV(ISC20); //rising edge interrupt; EICRA determines INT3:0
 	EICRB |= _BV(ISC61); //falling edge
 }
 void setupADC(void){
@@ -170,10 +191,10 @@ void mTimer2(int count){
 	TCCR2B&=0b11111000; //disable timer 2
 }
 /**********INTERRUPT SERVICE ROUTINES**********/
-/*sensor 3: 2nt Optical Inductive, Active HIGH starts AD conversion*/
+/*sensor 3: 2nt Optical Reflective, Active HIGH starts AD conversion*/
 ISR(INT2_vect){ //unused --ODA
 	//when there is a rising edge on PD2, ADC is triggered which is currently ADC1 (PF1)
-	ADCSRA |= _BV(ADSC);
+	OPT2FLAG=0x01;
 }
 ISR(ADC_vect){ //ADCResult is left-adjusted (i.e. the upper most byte is taken; 2 LSB' are discarded)
 	ADCResult = ADCL;
@@ -181,9 +202,7 @@ ISR(ADC_vect){ //ADCResult is left-adjusted (i.e. the upper most byte is taken; 
 	ADCResultFlag = 1;
 }
 ISR(INT6_vect){
-	int i;
 	ADC_RESET=1;
-	//bad practice, but good for demonstration purposes
 	mTimer2(25); //debounce period
-	while((PINE & 0b01000000)==0b01000000)mTimer2(2); //while switch is still pressed
+	while((PINE & 0b01000000)==0b01000000)mTimer2(25); //while switch is still pressed
 }

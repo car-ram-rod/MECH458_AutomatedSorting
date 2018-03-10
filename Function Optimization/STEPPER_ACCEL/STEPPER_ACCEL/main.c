@@ -80,11 +80,11 @@ int main(int argc, char *argv[]){
 	
 	/*code begins*/
 	
-	mTimer(1000);
+	mTimer2(1000);
 	PORTC=0b11000000;
-	mTimer(1000);
+	mTimer2(1000);
 	PORTC=stepperSigOrd[stepperIteration];
-	mTimer(1000);
+	mTimer2(1000);
 	
 	uint8_t LEDOutput=0b00000001;
 	int i, k;
@@ -95,32 +95,32 @@ int main(int argc, char *argv[]){
 		for(i=0;i<1;i++){
 			for(k=0;k<8;k++){
 				PORTC = (LEDOutput << k);
-				mTimer(200);
+				mTimer2(200);
 			}
 			for(k=6;k>=0;k--){
 				PORTC = (LEDOutput << k);
-				mTimer(200);
+				mTimer2(200);
 			}
 		}
 		HallEffect=0x00;
 		stepperHome(&stepperPosition, &stepperIteration);
 		
-		mTimer(2000);
+		mTimer2(4000);
 		/*stepper function testing*/
 		stepperControl(17,&stepperPosition, &stepperIteration); //~30 degrees
-		mTimer(2000);
+		mTimer2(2000);
 		stepperControl(33,&stepperPosition, &stepperIteration); //~60 degrees
-		mTimer(2000);
+		mTimer2(2000);
 		stepperControl(100,&stepperPosition, &stepperIteration); //180 degrees
-		mTimer(2000);
+		mTimer2(2000);
 		stepperControl(-100,&stepperPosition, &stepperIteration); //-180 degrees
-		mTimer(2000);
+		mTimer2(2000);
 		stepperControl(-33,&stepperPosition, &stepperIteration); //~-60 degrees
-		mTimer(2000);
-		stepperControl(-33,&stepperPosition, &stepperIteration); //~-60 degrees
-		mTimer(2000);
+		mTimer2(2000);
+		stepperControl(-17,&stepperPosition, &stepperIteration); //~-60 degrees
+		mTimer2(2000);
 		stepperControl(-100,&stepperPosition, &stepperIteration); //~-30 degrees
-		mTimer(2000);
+		mTimer2(2000);
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
@@ -131,8 +131,10 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	/*function variable declarations*/
 	int i=0;
 	int k=0;
-	uint8_t maxDelay = 22; //20ms corresponds to 50 steps per second
-	uint8_t minDelay = 12; //5ms corresponds to 200 steps per second; or 1 revolution per second
+	uint8_t maxDelay = 15; //20ms corresponds to 50 steps per second
+	uint8_t minDelay = 7; //5ms corresponds to 200 steps per second; or 1 revolution per second
+	//starts skipping steps at 5ms, 6ms is fine, but choosing 7ms for a safe buffer
+	//really good combinations: maxDelay:minDelay => 15:7,
 	uint8_t differential = maxDelay - minDelay;
 	uint8_t delay = maxDelay;
 	int PORTAREGSet = *stepperIt;
@@ -187,20 +189,22 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	return; //returns nothing
 }
 void stepperHome(int *stepperPos, int *stepperIt){
-	uint8_t delay = 20; //20ms corresponds to 50 steps per second
+	uint8_t delay = 30; //20ms corresponds to 50 steps per second
 	int i=0;
 	int x=0;
-	uint8_t offset=8; //arbitrary at this point
+	uint8_t offset=2; //arbitrary at this point
 	uint8_t DIRECTION=1; //1 for clockwise, -1 for counter-clockwise
 	PORTA=0x00;
-	while (HallEffect==0){
+	while (!HallEffect){
 		PORTA = stepperSigOrd[i];
 		mTimer2(delay);
 		i++;
 		if (i==4)i=0;
 	}
+	i--;
+	HallEffect=0x00;
 	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6) 
-	/*Insert code here to compensate for offset*/
+	/*Insert code here to compensate for offset --ODA CURRENTLY CAUSES MISSTEP... WHY?*/
 	for (x=0;x<offset;x++){
 		i+=DIRECTION;
 		if (i==4)i=0;
@@ -208,6 +212,7 @@ void stepperHome(int *stepperPos, int *stepperIt){
 		PORTA = stepperSigOrd[i];
 		mTimer2(delay);
 	}
+
 	//
 	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
 	PORTA = stepperSigOrd[i];
