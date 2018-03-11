@@ -215,7 +215,7 @@ void stepperHome(int *stepperPos, int *stepperIt){
 
 	//
 	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
-	PORTA = stepperSigOrd[i];
+	//PORTA = stepperSigOrd[i];
 	*stepperPos=0; //base stepper position (on black)
 
 }
