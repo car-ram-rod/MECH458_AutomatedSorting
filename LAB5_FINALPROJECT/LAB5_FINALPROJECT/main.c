@@ -55,6 +55,7 @@ int main(int argc, char *argv[]){
 	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
 	CLKPR = 0;
 	/*User Variables*/
+	int i=0x00; //solely used in for loops
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0x00;
 	int stepperMovement = 0x00;
@@ -62,6 +63,9 @@ int main(int argc, char *argv[]){
 	int tempOI_Count=0;
 	int tempInd =0;
 	uint16_t oldADCResult = 0x03FF;
+	uint16_t aveADCResult = 0; //needs to be able to hold a maximum of 0x2000
+	uint16_t oldADCResultArray[8] = {0};
+	uint8_t ADCFilterCount = 0x00;
 	int OI_Count = 0x00; //count of objects that have hit optical sensor 1 (OI)
 	int RL_Count = 0x00; //count of objects that have had their reflectivities quantified
 	int OR_Count = 0x00; //count of objects that have hit optical sensor 2 (OR)
@@ -172,17 +176,29 @@ int main(int argc, char *argv[]){
 		}
 		if((systemFlag&0x10) && (startMeasureFlag)){ //if an ADC conversion is complete
 			systemFlag&=0xEF; //reset flag to allow interrupt to be triggered right away if necessary
-			if(ADCResult<oldADCResult) oldADCResult=ADCResult; //reflectivity is increasing still (i.e. a lower ADC voltage is measured
-			else if(ADCResult>(oldADCResult+50)){ //reflectivities have been reducing and are 59(0x3B) lower than maximum reflectivity reached(buffer)
-				materialArray[RL_Count].reflectance=oldADCResult;//value of oldADCResult is now maximum possible reflectivity and is added to struct array
+			if(ADCResult<oldADCResult) {
+				oldADCResult=ADCResult; //reflectivity is increasing still (i.e. a lower ADC voltage is measured)
+				oldADCResultArray[ADCFilterCount]=oldADCResult; //store biggest result and seven previous for averaging
+				ADCFilterCount+=1;
+				ADCFilterCount&=0b00000111; //modulus of 8;
+			}
+			else if(ADCResult>(oldADCResult+0x3B)){ //reflectivities have been reducing and are 59(0x3B) lower than maximum reflectivity reached(buffer)
+				aveADCResult=0;
+				for (i=0;i<8;i++){//perform averaging of largest result and 7 results previous
+					aveADCResult+=oldADCResultArray[ADCFilterCount];
+					ADCFilterCount+=1;
+					ADCFilterCount&=0b00000111; //modulus of 8;
+				}
+				aveADCResult=aveADCResult/8;
+				materialArray[RL_Count].reflectance=aveADCResult;//value of oldADCResult is now maximum possible reflectivity and is added to struct array
 				tempFerrous=tempIndArray[RL_Count]; //store whether object was ferrous or non-ferrous
 				tempIndArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
 				materialArray[RL_Count].inductive=tempFerrous;//inductivity of material stored; 1 for inductive; 0 for non-ferrous
 				if(tempFerrous){ //object is metal: aluminum (light), steel (dark)
-					if (oldADCResult<AL_REFLECTIVITY) materialArray[RL_Count].type=150;//object is aluminium
+					if (aveADCResult<AL_REFLECTIVITY) materialArray[RL_Count].type=150;//object is aluminium
 					else materialArray[RL_Count].type=50;//object is steel
 					} else { //object is plastic: white (light), black (dark)
-					if (oldADCResult<WH_REFLECTIVITY) materialArray[RL_Count].type=100;//object is white plastic
+					if (aveADCResult<WH_REFLECTIVITY) materialArray[RL_Count].type=100;//object is white plastic
 					else materialArray[RL_Count].type=0;//object is black plastic
 				}
 				RL_Count+=1;//add one to amount of objects that have had their reflectivities measured

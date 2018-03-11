@@ -44,7 +44,11 @@ volatile unsigned char OPT2FLAG;
 int main(void){
 	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
 	CLKPR = 0;
+	int i=0;
+	uint16_t aveADCResult = 0; //needs to be able to hold a maximum of 0x2000
+	uint16_t oldADCResultArray[8] = {0};
 	uint16_t oldADCResult=0x03FF;
+	uint8_t ADCFilterCount = 0x00;
 	cli(); //disable all interrupts
 	initTimer1();
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM
@@ -69,12 +73,23 @@ int main(void){
 		if (ADCResultFlag){
 			if (ADCResult<(oldADCResult)){
 				oldADCResult=ADCResult;
-				PORTC=(oldADCResult & 0x00FF); //bits 7:0
-				PORTD=((oldADCResult & 0x0100) >> 3); //D2=GREEN when set (8th bit of ADC value)
-				PORTD|=((oldADCResult & 0x0200) >> 2); //D5=RED when set (9th bit of ADC value)
-;
+				oldADCResultArray[ADCFilterCount]=oldADCResult; //store biggest result and seven previous for averaging
+				ADCFilterCount+=1;
+				ADCFilterCount&=0b00000111; //modulus of 8;
+
 			} else if (ADCResult>(oldADCResult+50)){
 				oldADCResult=0xFFFF;
+				aveADCResult=0;
+				for (i=0;i<8;i++){//perform averaging of largest result and 7 results previous
+					aveADCResult+=oldADCResultArray[ADCFilterCount];
+					ADCFilterCount+=1;
+					ADCFilterCount&=0b00000111; //modulus of 8;
+				}
+				aveADCResult=aveADCResult/8;
+				/*set LEDs to show averaged value*/
+				PORTC=(aveADCResult & 0x00FF); //bits 7:0
+				PORTD=((aveADCResult & 0x0100) >> 3); //D2=GREEN when set (8th bit of ADC value)
+				PORTD|=((aveADCResult & 0x0200) >> 2); //D5=RED when set (9th bit of ADC value)
 				mTimer2(20001);
 				PORTC=0x00;
 				PORTD&=0x0F;
