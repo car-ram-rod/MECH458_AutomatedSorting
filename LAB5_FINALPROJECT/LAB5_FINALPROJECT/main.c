@@ -81,7 +81,8 @@ int main(int argc, char *argv[]){
 	uint8_t AL_Count = 0x00;
 	//int OIOR_Count = 0x00; //count of objects between optical sensors 1 and 2
 	//int OIEX_Count = 0x00; //count of objects between optical sensors 1 and 3 (Exit sensor)
-	int OREX_Count = 0x00; //count of objects between optical sensors 2 and 3 (Exit sensor)
+	//int OREX_Count = 0x00; //count of objects between optical sensors 2 and 3 (Exit sensor)
+	int RLEX_Count = 0x00; //count of objects that have had their reflectivity measured, but not reached sensor 3 (EX)
 	uint8_t tempIndArray[64]= {0};
 	uint8_t tempFerrous=0;
 	uint8_t startMeasureFlag=0x00; //allows the ADC conversions to stop if no object is in front of RL sensor
@@ -153,8 +154,7 @@ int main(int argc, char *argv[]){
 		}
 		if(systemFlag&0x04){ //optical sensor 2 (OR)
 			systemFlag&=0xFB; //reset flag
-			OR_Count+=1;
-			OREX_Count+=1;
+			OR_Count+=1;			
 			ADCSRA |= _BV(ADSC); //initialize an ADC conversion
 			startMeasureFlag=0x01;//allow ADC conversions to continue
 		}
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]){
 			else if (tempType==50)ST_Count += 0x01;
 			else if (tempType==100)WH_Count += 0x01;
 			else if (tempType==150)AL_Count += 0x01;
-			OREX_Count-=1;
+			RLEX_Count-=1;
 			EX_Count+=1;
 		}
 		if((systemFlag&0x10) && (startMeasureFlag)){ //if an ADC conversion is complete and the current object has not hits its min (ADC value decreases with higher reflectivity) ADC value
@@ -210,6 +210,7 @@ int main(int argc, char *argv[]){
 					else materialArray[RL_Count].type=0;//object is black plastic
 				}
 				RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
+				RLEX_Count+=1;
 				oldADCResult=0x03FF;//reset oldADCResult to 0x3FF for the next objects reflectivites to be measured
 				startMeasureFlag=0x00; //set flag to zero so ADC conversions cannot occur
 			}
@@ -221,24 +222,11 @@ int main(int argc, char *argv[]){
 		//// -ODA, may add too much processing which could reduce ADC Conversion accuracy; therefore, may need to add additional conditioning
 		////e.g. if ((OREX_Count) && (startMeasureFlag=0x00)) //only allow stepper to move in advance if no ADC is occurring
 		////or maybe... if ((OREX_Count) && (OIOR_Count==0)) //when no objects are between the first and second optical sensors
-		if(OREX_Count){//if there are objects between the OR and EX sensor, move steppers towards proper location
+		if((RLEX_Count) && (startMeasureFlag=0x00)){//if there are objects between the OR and EX sensor that have their reflectivity quantified
 			if(stepEarlyFlag==0){
 				TCCR1B |= _BV(CS10); //clock pre-scalar (clk/1); 8ms per overflow; Starts timer
 				TCNT1=0x00; //set timer equal to zero
 				if ((TIFR1 & 0x01) == 0x01)TIFR1|=0x01; //if TOV1 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
-				tempEarlyType=materialArray[EX_Count].type;
-				stepEarlyMovement=stepperPosition-tempEarlyType;
-				if (abs(stepEarlyMovement)>100){
-					if (stepEarlyMovement<0) stepEarlyMovement+=200;
-					else stepEarlyMovement-=200;
-				}
-				if (stepEarlyMovement<0)Direction=-1;
-				else Direction=1;
-				stepperIteration+=Direction;
-				if(stepperIteration==4)stepperIteration=0;
-				if(stepperIteration==-1)stepperIteration=3;
-				PORTA=stepperSigOrd[stepperIteration];
-				stepperPosition+=Direction;
 				stepEarlyFlag=1;
 				stepEarlyCount=0;
 			}
@@ -251,8 +239,9 @@ int main(int argc, char *argv[]){
 					else stepEarlyMovement-=200;
 				}
 				if (stepEarlyMovement<0)Direction=-1;
-				else Direction=1;
-				stepperIteration+=Direction;//move stepper in correct direction
+				else if (stepEarlyMovement>0)Direction=1;
+				else Direction=0;
+				stepperIteration+=Direction;
 				if(stepperIteration==4)stepperIteration=0;
 				if(stepperIteration==-1)stepperIteration=3;
 				PORTA=stepperSigOrd[stepperIteration];
