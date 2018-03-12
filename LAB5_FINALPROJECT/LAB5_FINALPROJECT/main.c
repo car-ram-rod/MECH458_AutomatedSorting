@@ -42,6 +42,7 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 
 volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 volatile unsigned int systemFlag; //bits(4:0) = {ADCResultFlag,optExitFlag,opt2Flag,inductiveFlag,opt1Flag}
+volatile unsigned int stepEarlyCount;
 //volatile unsigned int opt1Flag; //set when 1st optical sensor is triggered (OI sensor)
 //volatile unsigned int inductiveFlag; //an inductive flag is picked up
 //volatile unsigned int opt2Flag; //set when 2nd optical sensor is triggered (OR sensor)
@@ -59,6 +60,10 @@ int main(int argc, char *argv[]){
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0x00;
 	int stepperMovement = 0x00;
+	uint8_t stepEarlyFlag = 0x00;
+	int stepEarlyMovement =0x00;
+	int tempEarlyType = 0;
+	int Direction = 1;
 	int tempType = 0;
 	int tempOI_Count=0;
 	int tempInd =0;
@@ -116,6 +121,7 @@ int main(int argc, char *argv[]){
 	//optExitFlag=0x00;
 	//ADCResultFlag=0x00;	
 	HallEffect=0x00; 
+	stepEarlyCount=0x00;
 	stepperHome(&stepperPosition,&stepperIteration); //home stepper
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	while(1){
@@ -158,12 +164,14 @@ int main(int argc, char *argv[]){
 			//if object type matches stepper location; do nothing...
 			tempType=materialArray[EX_Count].type;
 			stepperMovement=stepperPosition-tempType;
-			if (!stepperMovement){//if object type doesn't match stepper location; stop motor, move stepper, start motor
+			if (stepperMovement){//if object type doesn't match stepper location; stop motor, move stepper, start motor
 				PORTB &=0xF0; //Apply Vcc brake to motor
 				//stepper rotation logic
-				if (stepperMovement==150) stepperMovement=-50;
-				else if (stepperMovement==-150) stepperMovement=50;
-				else if (stepperMovement== 100) stepperMovement=-100; //counter-clockwise is more efficient for particular stepper
+				//if (abs(stepperMovement)<=100) do nothing;
+				if (abs(stepperMovement)>100){
+					if (stepperMovement<0) stepperMovement+=200;
+					else stepperMovement-=200;
+				}
 				stepperControl(stepperMovement, &stepperPosition, &stepperIteration);//rotate stepper to proper location
 				PORTB |=0b00001000; //start motor forwards
 			}
@@ -174,7 +182,7 @@ int main(int argc, char *argv[]){
 			OREX_Count-=1;
 			EX_Count+=1;
 		}
-		if((systemFlag&0x10) && (startMeasureFlag)){ //if an ADC conversion is complete
+		if((systemFlag&0x10) && (startMeasureFlag)){ //if an ADC conversion is complete and the current object has not hits its min (ADC value decreases with higher reflectivity) ADC value
 			systemFlag&=0xEF; //reset flag to allow interrupt to be triggered right away if necessary
 			if(ADCResult<oldADCResult) {
 				oldADCResult=ADCResult; //reflectivity is increasing still (i.e. a lower ADC voltage is measured)
@@ -206,12 +214,57 @@ int main(int argc, char *argv[]){
 				startMeasureFlag=0x00; //set flag to zero so ADC conversions cannot occur
 			}
 			ADCSRA |= _BV(ADSC); //re-trigger ADC
-		} else systemFlag&=0xEF;
+		} else systemFlag&=0xEF; //reset flag
 		if (systemFlag&0x20){//if PAUSE Button is pressed
 			//print Black, White, Aluminium, and Steel Counts to screen and display how many objects are between optical sensor 2 and 3 (EX)
 		}
+		//// -ODA, may add too much processing which could reduce ADC Conversion accuracy; therefore, may need to add additional conditioning
+		////e.g. if ((OREX_Count) && (startMeasureFlag=0x00)) //only allow stepper to move in advance if no ADC is occurring
+		////or maybe... if ((OREX_Count) && (OIOR_Count==0)) //when no objects are between the first and second optical sensors
+		if(OREX_Count){//if there are objects between the OR and EX sensor, move steppers towards proper location
+			if(stepEarlyFlag==0){
+				TCCR1B |= _BV(CS10); //clock pre-scalar (clk/1); 8ms per overflow; Starts timer
+				TCNT1=0x00; //set timer equal to zero
+				if ((TIFR1 & 0x01) == 0x01)TIFR1|=0x01; //if TOV1 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
+				tempEarlyType=materialArray[EX_Count].type;
+				stepEarlyMovement=stepperPosition-tempEarlyType;
+				if (abs(stepEarlyMovement)>100){
+					if (stepEarlyMovement<0) stepEarlyMovement+=200;
+					else stepEarlyMovement-=200;
+				}
+				if (stepEarlyMovement<0)Direction=-1;
+				else Direction=1;
+				stepperIteration+=Direction;
+				if(stepperIteration==4)stepperIteration=0;
+				if(stepperIteration==-1)stepperIteration=3;
+				PORTA=stepperSigOrd[stepperIteration];
+				stepperPosition+=Direction;
+				stepEarlyFlag=1;
+				stepEarlyCount=0;
+			}
+			if (stepEarlyCount>=2){ //takes >=16ms; Note that stepEarlyCount is updated in ISR
+				stepEarlyCount=0;
+				tempEarlyType=materialArray[EX_Count].type;
+				stepEarlyMovement=stepperPosition-tempEarlyType;
+				if (abs(stepEarlyMovement)>100){
+					if (stepEarlyMovement<0) stepEarlyMovement+=200;
+					else stepEarlyMovement-=200;
+				}
+				if (stepEarlyMovement<0)Direction=-1;
+				else Direction=1;
+				stepperIteration+=Direction;//move stepper in correct direction
+				if(stepperIteration==4)stepperIteration=0;
+				if(stepperIteration==-1)stepperIteration=3;
+				PORTA=stepperSigOrd[stepperIteration];
+				stepperPosition+=Direction;
+				stepperPosition%=200;		
+			}
+		} else {
+			TCCR1B&=0b11111000; //disable timer 1 
+			stepEarlyFlag=0; //re-initialize 
+		}
 		//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
-		OI_Count &= 0b00111111;
+		OI_Count &= 0b00111111;//modulus of 64
 		RL_Count &= 0b00111111;
 		OR_Count &= 0b00111111;
 		EX_Count &= 0b00111111;
@@ -244,6 +297,7 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	PORTAREGSet+=DIRECTION;
 	if(PORTAREGSet==4)PORTAREGSet=0;
 	if(PORTAREGSet==-1)PORTAREGSet=3;
+	TCCR1B &= 0b11111000; //disable timer1; needed due to automated counter in ISR that may cause missed steps
 	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
 	TCNT2=0x00; //set timer equal to zero; note timer is already counting based on clock prescalar
 	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset it to zero
@@ -272,6 +326,11 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 		PORTA = stepperSigOrd[PORTAREGSet];//move stepper after first delay
 	}
 	TCCR2B&=0b11111000; //disable timer 2
+	//re-enable timer 1 and re-initialize counter so the next early step doesn't occur until 16ms later, not instantly
+	TCCR1B |= _BV(CS10); //clock pre-scalar (clk/1); 8ms per overflow; Starts timer1
+	TCNT1=0x0000; //set timer equal to zero
+	if ((TIFR1 & 0x01) == 0x01)TIFR1|=0x01; //if TOV1 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
+	stepEarlyCount =0; //reset counter for timer1
 	*stepperIt=PORTAREGSet;
 	//*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
 	*stepperPos += steps;
@@ -373,6 +432,11 @@ ISR(ADC_vect){
 /*sensor 6: HE: Hall Effect sensor; used for homing stepper*/
 ISR(INT6_vect){ //on PE6; Active low for hall effect sensor 
 	HallEffect=0x01;
+}
+//timer 1 overflow flag; enabled through sei();
+ISR(TIMER1_OVF_vect){
+	stepEarlyCount+=1;
+	TIFR1|=0x01;
 }
 
 
