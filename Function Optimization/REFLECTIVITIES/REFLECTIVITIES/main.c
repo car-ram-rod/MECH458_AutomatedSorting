@@ -111,14 +111,8 @@ int main(void){
 			OPT2FLAG=0x00;
 			ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
 		}
-		//mTimer(10) //--ODA Edit;Does mTimer break with other interrupts engaged?
-		if (ADC_RESET){
-			oldADCResult=0xFFFF;
-			ADC_RESET=0x00;
-			PORTC=0x00;
-			PORTD&=0x0F;
-		}
-		//mTimer2(5); //delay as if in rest of normal while loop
+		//for(i=0;i<2000;i++){} //arbitrary delay
+		//mTimer2(2); //delay as if in rest of normal while loop
 	}
 	return (0); //This line returns a 0 value to the calling program
 }
