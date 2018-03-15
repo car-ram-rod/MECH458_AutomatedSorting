@@ -23,11 +23,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
   9 .debug_frame  00000280  00000000  00000000  00003ad0  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    0000085f  00000000  00000000  00003d50  2**0
+ 10 .debug_str    000008b4  00000000  00000000  00003d50  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00000c3f  00000000  00000000  000045af  2**0
+ 11 .debug_loc    00000c3f  00000000  00000000  00004604  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 000000b0  00000000  00000000  000051ee  2**0
+ 12 .debug_ranges 000000b0  00000000  00000000  00005243  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -153,81 +153,37 @@ Disassembly of section .text:
   d2:	96 cf       	rjmp	.-212    	; 0x0 <__vectors>
 
 000000d4 <timer1Init>:
-#include "interrupt.h"
-void timer1Init (void){ //initialize Timer 1 for CTC (Clear Timer on Compare)
-	TCCR1A = 0;
   d4:	10 92 80 00 	sts	0x0080, r1	; 0x800080 <__TEXT_REGION_LENGTH__+0x7e0080>
   d8:	08 95       	ret
 
 000000da <timer2Init>:
-/*at a clock frequency of 8MHz this is a 1.024ms timer for each while loop cycle*/
-/*e.g. (32/8MHz)x(0xFF=256)=0.001024s=1.024ms*/
-void timer2Init(void){ //clock is turned on during interval of use and then off when unused
-	//sei(); enables all interrupts thus following is unneccessary 
-	//TIMSK2 |= _BV(TOIE2); //enable Timer/Counter 2 Overflow interrupt; sets TOV2 bit in TIFR2 register upon overflow
-	TCCR2A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV2 flag
   da:	10 92 b0 00 	sts	0x00B0, r1	; 0x8000b0 <__TEXT_REGION_LENGTH__+0x7e00b0>
   de:	08 95       	ret
 
 000000e0 <mTimer2>:
-		//TOP=0xFF; Update is immediate
-	//TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32); starts timer
-}
-void mTimer2(int count){
   e0:	ac 01       	movw	r20, r24
-	int i=0;
-	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
   e2:	e1 eb       	ldi	r30, 0xB1	; 177
   e4:	f0 e0       	ldi	r31, 0x00	; 0
   e6:	90 81       	ld	r25, Z
   e8:	93 60       	ori	r25, 0x03	; 3
   ea:	90 83       	st	Z, r25
-	TCNT2=0x00; //set timer equal to zero
   ec:	10 92 b2 00 	sts	0x00B2, r1	; 0x8000b2 <__TEXT_REGION_LENGTH__+0x7e00b2>
-	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
   f0:	b8 99       	sbic	0x17, 0	; 23
   f2:	b8 9a       	sbi	0x17, 0	; 23
-	//TIMSK2 |= _BV(TOIE2); //enable Timer/Counter 2 Overflow interrupt; sets TOV2 bit in TIFR2 register upon overflow
-	TCCR2A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV2 flag
-		//TOP=0xFF; Update is immediate
-	//TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32); starts timer
-}
-void mTimer2(int count){
   f4:	20 e0       	ldi	r18, 0x00	; 0
   f6:	30 e0       	ldi	r19, 0x00	; 0
   f8:	05 c0       	rjmp	.+10     	; 0x104 <mTimer2+0x24>
-	int i=0;
-	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
-	TCNT2=0x00; //set timer equal to zero
-	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
-	while (i<count){ //iterate through given count
-		if ((TIFR2 & 0x01) == 0x01){ //if overflow has occurred in counter
   fa:	b8 9b       	sbis	0x17, 0	; 23
   fc:	fe cf       	rjmp	.-4      	; 0xfa <mTimer2+0x1a>
-			TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit
   fe:	b8 9a       	sbi	0x17, 0	; 23
-			i+=1;
  100:	2f 5f       	subi	r18, 0xFF	; 255
  102:	3f 4f       	sbci	r19, 0xFF	; 255
-void mTimer2(int count){
-	int i=0;
-	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
-	TCNT2=0x00; //set timer equal to zero
-	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
-	while (i<count){ //iterate through given count
  104:	24 17       	cp	r18, r20
  106:	35 07       	cpc	r19, r21
  108:	1c f4       	brge	.+6      	; 0x110 <mTimer2+0x30>
-		if ((TIFR2 & 0x01) == 0x01){ //if overflow has occurred in counter
  10a:	b8 9b       	sbis	0x17, 0	; 23
  10c:	f6 cf       	rjmp	.-20     	; 0xfa <mTimer2+0x1a>
  10e:	f7 cf       	rjmp	.-18     	; 0xfe <mTimer2+0x1e>
-			TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit
-			i+=1;
-			//equivalent; TIFR2 |= _BV(TOV2)
-		}
-	}
-	TCCR2B&=0b11111000; //disable timer 2
  110:	e1 eb       	ldi	r30, 0xB1	; 177
  112:	f0 e0       	ldi	r31, 0x00	; 0
  114:	80 81       	ld	r24, Z
@@ -236,9 +192,6 @@ void mTimer2(int count){
  11a:	08 95       	ret
 
 0000011c <timer3Init>:
-}
-void timer3Init(void){ //clock is turned on during interval of use and then off when unused
-	TCCR3A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV3 flag
  11c:	10 92 90 00 	sts	0x0090, r1	; 0x800090 <__TEXT_REGION_LENGTH__+0x7e0090>
  120:	08 95       	ret
 
@@ -1571,7 +1524,8 @@ int main(int argc, char *argv[]){
 					ADCFilterCount+=1;
 					ADCFilterCount&=0b00000111; //modulus of 8;
 				}
-				aveADCResult=aveADCResult/8;
+				//aveADCResult=aveADCResult/8;
+				aveADCResult>>=3; //identical to dividing by 8
  7ee:	27 95       	ror	r18
  7f0:	36 95       	lsr	r19
  7f2:	27 95       	ror	r18

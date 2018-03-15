@@ -25,8 +25,10 @@ void setupADC(void);
 void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0->100), direction possibilities {0b11,0b10,0b01,0b00}
 void initTimer1(void);
 void timer2Init(void);
+void timer3Init(void);
 void mTimer(int count);
 void mTimer2(int count);
+void mTimer3(int count);
 /*User Defines*/
 #define highNibMask 0xF0
 #define lowNibMask 0x0F
@@ -37,8 +39,14 @@ void mTimer2(int count);
 /*Global Variables*/
 volatile unsigned int ADCResult; //16 bits: 0 => (2^9-1); stores result of ADC conversion
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
+volatile unsigned int lowADCArray[8];
+volatile unsigned int ADCFilterCount;
+volatile unsigned int ADCAverage;
 volatile unsigned char ADC_RESET;
-volatile unsigned char OPT2FLAG;
+volatile unsigned int lowADC;
+volatile unsigned int highByteADC;
+volatile unsigned int lowByteADC;
+volatile unsigned int f;
 
 /*Beginning of main program*/
 int main(void){
@@ -46,11 +54,10 @@ int main(void){
 	CLKPR = 0;
 	int i=0;
 	uint16_t aveADCResult = 0; //needs to be able to hold a maximum of 0x2000
-	uint16_t oldADCResultArray[8] = {0};
-	uint16_t oldADCResult=0x03FF;
-	uint8_t ADCFilterCount = 0x00;
 	cli(); //disable all interrupts
 	initTimer1();
+	timer2Init();
+	timer3Init();
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM
 	setupISR(); //interrupt initializations
 	setupADC(); //ADC initializations
@@ -64,55 +71,10 @@ int main(void){
 	mTimer2(2000);
 	PORTC=0b00000000;
 	mTimer2(2000);
-	motorControl(40,DC_FORWARD); //start conveyor towards stepper
+	motorControl(CONVEYOR_SPEED,DC_FORWARD); //start conveyor towards stepper
 	ADC_RESET=0;
-	OPT2FLAG=0;
-	ADCResultFlag=0;
-
 	while (1){
-		if (ADCResultFlag){
-			if (ADCResult<(oldADCResult)){
-				oldADCResult=ADCResult;
-				oldADCResultArray[ADCFilterCount]=oldADCResult; //store biggest result and seven previous for averaging
-				ADCFilterCount+=1;
-				ADCFilterCount&=0b00000111; //modulus of 8;
-
-			} else if (ADCResult>(oldADCResult+50)){
-				oldADCResult=0xFFFF;
-				aveADCResult=0;
-				for (i=0;i<8;i++){//perform averaging of largest result and 7 results previous
-					aveADCResult+=oldADCResultArray[ADCFilterCount];
-					ADCFilterCount+=1;
-					ADCFilterCount&=0b00000111; //modulus of 8;
-				}
-				aveADCResult=aveADCResult/8;
-				/*set LEDs to show averaged value*/
-				PORTC=(aveADCResult & 0x00FF); //bits 7:0
-				PORTD=((aveADCResult & 0x0100) >> 3); //D2=GREEN when set (8th bit of ADC value)
-				PORTD|=((aveADCResult & 0x0200) >> 2); //D5=RED when set (9th bit of ADC value)
-				mTimer2(20001);
-				PORTC=0x00;
-				PORTD&=0x0F;
-			}
-			ADCResultFlag=0x00;
-			ADCSRA |= _BV(ADSC);	
-			/*PORTD = 0b10100000; //D5=Red; D2=Green
-			mTimer(1000);
-			PORTD = 0b01010000; //D5=Green; D2=Red
-			mTimer(1000);
-			PORTD = 0b11110000; //D5=Yellow; D2=Yellow
-			mTimer(1000);
-			PORTD = 0b10010000; //D5=Red; D2=Red
-			mTimer(1000);	
-			PORTD = 0b01100000; //D5=Green; D2=Green
-			mTimer(1000);*/
-		}
-		if (OPT2FLAG){
-			OPT2FLAG=0x00;
-			ADCSRA |= _BV(ADSC); //initialize the ADC, start one conversion at the beginning
-		}
-		//for(i=0;i<2000;i++){} //arbitrary delay
-		//mTimer2(2); //delay as if in rest of normal while loop
+		
 	}
 	return (0); //This line returns a 0 value to the calling program
 }
@@ -128,9 +90,10 @@ void setupPWM(int motorDuty){
 }
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
-	EIMSK |= _BV(INT6) |_BV(INT2); //enable INT6
+	//EIMSK |= _BV(INT6) |_BV(INT2); //enable INT6
+	EIMSK |= _BV(INT2); //enable INT6
 	EICRA |= _BV(ISC21) | _BV(ISC20); //rising edge interrupt; EICRA determines INT3:0
-	EICRB |= _BV(ISC61); //falling edge
+	//EICRB |= _BV(ISC61); //falling edge
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
@@ -199,19 +162,46 @@ void mTimer2(int count){
 	}
 	TCCR2B&=0b11111000; //disable timer 2
 }
+void timer3Init(void){ //clock is turned on during interval of use and then off when unused
+	TCCR3A=0; //Mode 0:normal port operation; keeps counting no matter what; means you have to reset the TOV3 flag
+}
+void mTimer3(int count){ //16 bit timer 8.192ms per cycle
+	int i=0;
+	TCCR3B |= _BV(CS30); //clock pre-scalar (clk/1)
+	TCNT3=0x00; //set timer equal to zero
+	if ((TIFR3 & 0x01) == 0x01)TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
+	while (i<count){ //iterate through given count
+		if ((TIFR3 & 0x01) == 0x01){ //if overflow has occurred in counter
+			TIFR3|=0x01; //reset overflow flag by writing a 1 to TOV2 bit
+			i+=1;
+			//equivalent; TIFR2 |= _BV(TOV2)
+		}
+	}
+	TCCR3B&=0b11111000; //disable timer 2
+}
 /**********INTERRUPT SERVICE ROUTINES**********/
 /*sensor 3: 2nt Optical Reflective, Active HIGH starts AD conversion*/
 ISR(INT2_vect){ //unused --ODA
 	//when there is a rising edge on PD2, ADC is triggered which is currently ADC1 (PF1)
-	OPT2FLAG=0x01;
+	lowADC=0xFFFF;
+	ADCSRA|= _BV(ADSC); //trigger ADC (i.e. begin ADC conversion)
 }
 ISR(ADC_vect){ //ADCResult is left-adjusted (i.e. the upper most byte is taken; 2 LSB' are discarded)
-	ADCResult = ADCL;
-	ADCResult += ADCH << 8;
-	ADCResultFlag = 1;
+	if (lowADC>ADC){
+		lowADC=ADC; //ADC is a combination of ADCH and ADCL
+		highByteADC=ADCH;
+		lowByteADC=ADCL;
+	}
+	if ((PIND&0b00000100)==0b00000100) ADCSRA|= _BV(ADSC); //if there is still an object keep initializing ADC conversions
+	else{
+		PORTC=lowByteADC;
+		PORTD=((highByteADC&0b00000011)<< 5); //0b00100000 if true //green green
+	}
 }
 ISR(INT6_vect){
 	ADC_RESET=1;
-	mTimer2(25); //debounce period
+	mTimer2(15); //debounce period
 	while((PINE & 0b01000000)==0b01000000)mTimer2(25); //while switch is still pressed
 }
+
+

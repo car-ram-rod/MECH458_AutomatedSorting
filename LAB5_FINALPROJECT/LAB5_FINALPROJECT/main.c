@@ -197,7 +197,8 @@ int main(int argc, char *argv[]){
 					ADCFilterCount+=1;
 					ADCFilterCount&=0b00000111; //modulus of 8;
 				}
-				aveADCResult=aveADCResult/8;
+				//aveADCResult=aveADCResult/8;
+				aveADCResult>>=3; //identical to dividing by 8
 				materialArray[RL_Count].reflectance=aveADCResult;//value of oldADCResult is now maximum possible reflectivity and is added to struct array
 				tempFerrous=tempIndArray[RL_Count]; //store whether object was ferrous or non-ferrous
 				tempIndArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
