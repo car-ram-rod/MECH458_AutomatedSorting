@@ -41,14 +41,22 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 /*Global Variables*/
 
 volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
-volatile unsigned int systemFlag; //bits(4:0) = {ADCResultFlag,optExitFlag,opt2Flag,inductiveFlag,opt1Flag}
+//volatile unsigned int systemFlag; //bits(4:0) = {ADCResultFlag,optExitFlag,opt2Flag,inductiveFlag,opt1Flag}
 volatile unsigned int stepEarlyCount;
-//volatile unsigned int opt1Flag; //set when 1st optical sensor is triggered (OI sensor)
-//volatile unsigned int inductiveFlag; //an inductive flag is picked up
+volatile unsigned int lowADC;
+volatile unsigned int ADCFilterCount;
+volatile unsigned int lowADCArray[8];
+volatile unsigned char ADCCompleteFlag; //allows the ADC conversions to stop if no object is in front of RL sensor
+volatile unsigned int OI_Count; //count of objects that have hit optical sensor 1 (OI)
+volatile unsigned int RL_Count; //count of objects that have had their reflectivities quantified
+volatile unsigned int OR_Count; //count of objects that have hit optical sensor 2 (OR)
+volatile unsigned int EX_Count; //count of objects that have hit optical sensor 3 (EX)
+//volatile unsigned char opt1Flag; //set when 1st optical sensor is triggered (OI sensor)
+volatile unsigned char inductiveFlag; //an inductive flag is picked up
 //volatile unsigned int opt2Flag; //set when 2nd optical sensor is triggered (OR sensor)
-//volatile unsigned int optExitFlag; //object is at end of conveyor
-//volatile unsigned int ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
-volatile unsigned int HallEffect; //becomes set during stepper homing to know position
+volatile unsigned char optExitFlag; //object is at end of conveyor
+volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
+volatile unsigned char HallEffect; //becomes set during stepper homing to know position
 unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
 
 /* Main Routine */
@@ -65,16 +73,9 @@ int main(int argc, char *argv[]){
 	int tempEarlyType = 0;
 	int Direction = 1;
 	int tempType = 0;
-	int tempOI_Count=0;
-	int tempInd =0;
-	uint16_t oldADCResult = 0x03FF;
-	uint16_t aveADCResult = 0; //needs to be able to hold a maximum of 0x2000
-	uint16_t oldADCResultArray[8] = {0};
-	uint8_t ADCFilterCount = 0x00;
-	int OI_Count = 0x00; //count of objects that have hit optical sensor 1 (OI)
-	int RL_Count = 0x00; //count of objects that have had their reflectivities quantified
-	int OR_Count = 0x00; //count of objects that have hit optical sensor 2 (OR)
-	int EX_Count = 0x00; //count of objects that have hit optical sensor 3 (EX)
+	//int tempOI_Count=0;
+	//int tempInd =0;
+	uint16_t ADCAverage = 0; //needs to be able to hold a maximum of 0x2000
 	uint8_t BL_Count = 0x00;
 	uint8_t WH_Count = 0x00;
 	uint8_t ST_Count = 0x00;
@@ -83,13 +84,13 @@ int main(int argc, char *argv[]){
 	//int OIEX_Count = 0x00; //count of objects between optical sensors 1 and 3 (Exit sensor)
 	//int OREX_Count = 0x00; //count of objects between optical sensors 2 and 3 (Exit sensor)
 	int RLEX_Count = 0x00; //count of objects that have had their reflectivity measured, but not reached sensor 3 (EX)
-	uint8_t tempIndArray[64]= {0};
+	uint8_t inductiveArray[64]= {0};
 	uint8_t tempFerrous=0;
-	uint8_t startMeasureFlag=0x00; //allows the ADC conversions to stop if no object is in front of RL sensor
-	uint8_t falseInductFlag=0x00;
+	//uint8_t falseInductFlag=0x00;
 	//initialize structure to store material characteristics
+	//--ODA: eliminate entire struct in favor of an inductive and type array
 	typedef struct material{
-		uint16_t reflectance; //10 bit value
+		uint16_t reflectance; //10 bit value; --ODA ELIMINATE AS UNNEEDED
 		int type; //black=0;;aluminum=50;white=100;steel=150
 		uint8_t inductive; //states whether object is ferrous or not (0=>non-ferrous;1=>ferrous)
 		}material;
@@ -115,27 +116,30 @@ int main(int argc, char *argv[]){
 	// PORTB &= 0b1110000; //apply Vcc brake to motor
 	//PORTB |=0b1000; //start motor in specified direction
 	/*initialize flags and counters*/
-	systemFlag=0x0000;
+	//systemFlag=0x0000;
+	OR_Count=0;
+	RL_Count=0;
+	OI_Count=0;
+	EX_Count=0;
 	//opt1Flag=0x00;
 	//opt2Flag=0x00;
-	//inductiveFlag=0x00;
-	//optExitFlag=0x00;
-	//ADCResultFlag=0x00;	
+	inductiveFlag=0x00;
+	optExitFlag=0x00;
+	ADCResultFlag=0x00;	
 	HallEffect=0x00; 
 	stepEarlyCount=0x00;
 	stepperHome(&stepperPosition,&stepperIteration); //home stepper
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	while(1){
-		if(systemFlag&0x01){ //triggered on a rising edge for an active low signal (i.e. when the object has just passed optical sensor 1)
-			systemFlag&=0xFE; //reset flag
-			OI_Count+=1; //add one to amount of objects that have passed optical sensor 1
-		}// it is important to note that optical sensor 1 (OI) triggers very close to the inductive sensor (IN)
-		if (systemFlag&0x02){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
+		if (inductiveFlag){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
+			inductiveFlag=0;
+			inductiveArray[((OI_Count-1)&0b00111111)]=0x01;
+			/*
 			if (falseInductFlag==0x00){
-				if (OI_Count) tempInd=tempIndArray[OI_Count-1];
-				else tempInd=tempIndArray[63];
-				if (OI_Count) tempIndArray[OI_Count-1]=0x01; //set temporary inductive array equal to 1 for object based on OI_Count
-				else tempIndArray[63]=0x01; //special case occurs on roll-over of counters when OI_Count==0; occurs as we are minusing 1 from count
+				if (OI_Count) tempInd=inductiveArray[OI_Count-1];
+				else tempInd=inductiveArray[63];
+				if (OI_Count) inductiveArray[OI_Count-1]=0x01; //set temporary inductive array equal to 1 for object based on OI_Count
+				else inductiveArray[63]=0x01; //special case occurs on roll-over of counters when OI_Count==0; occurs as we are minusing 1 from count
 				tempOI_Count=OI_Count;
 				falseInductFlag=0x01;
 				TCCR3B |= _BV(CS30); //clock pre-scalar (clk/1); initialize clock counting
@@ -147,19 +151,22 @@ int main(int argc, char *argv[]){
 				TCCR3B&=0b11111000; //disable timer 3
 				falseInductFlag=0x00; //reset flag
 				if (tempOI_Count!=OI_Count){
-					tempIndArray[(OI_Count-2)%64]=tempInd; //send the value you stole back to the falsely set array object
-					tempIndArray[(OI_Count-1)%64]=0x01; //set the actual current object to inductive=1
+					inductiveArray[(OI_Count-2)&0b00111111]=tempInd; //send the value you stole back to the falsely set array object; modulus of 64
+					inductiveArray[(OI_Count-1)&0b00111111]=0x01; //set the actual current object to inductive=1; modulus of 64
 				}	
 			}
+			*/
 		}
+		/*
 		if(systemFlag&0x04){ //optical sensor 2 (OR)
 			systemFlag&=0xFB; //reset flag
-			OR_Count+=1;			
+						
 			ADCSRA |= _BV(ADSC); //initialize an ADC conversion
 			startMeasureFlag=0x01;//allow ADC conversions to continue
 		}
-		if(systemFlag&0x08){ //object has hit sensor at end of conveyor
-			systemFlag&=0xF7; //reset flag
+		*/
+		if(optExitFlag){ //object has hit sensor at end of conveyor
+			optExitFlag=0; //reset flag
 			//corresponding positions (black=0;aluminum=50;white=100;steel=150)
 			//if object type matches stepper location; do nothing...
 			tempType=materialArray[EX_Count].type;
@@ -182,51 +189,44 @@ int main(int argc, char *argv[]){
 			RLEX_Count-=1;
 			EX_Count+=1;
 		}
-		if((systemFlag&0x10) && (startMeasureFlag)){ //if an ADC conversion is complete and the current object has not hits its min (ADC value decreases with higher reflectivity) ADC value
-			systemFlag&=0xEF; //reset flag to allow interrupt to be triggered right away if necessary
-			if(ADCResult<oldADCResult) {
-				oldADCResult=ADCResult; //reflectivity is increasing still (i.e. a lower ADC voltage is measured)
-				oldADCResultArray[ADCFilterCount]=oldADCResult; //store biggest result and seven previous for averaging
-				ADCFilterCount+=1;
-				ADCFilterCount&=0b00000111; //modulus of 8;
+		if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
+			ADCResultFlag=0; //reset flag 
+			ADCAverage=0;
+			for(i=0;i<8;i++){
+				ADCAverage+=lowADCArray[ADCFilterCount];
+				ADCFilterCount++;
+				ADCFilterCount&=0x07; //modulus of 8 with positive incrementing variables
 			}
-			else if(ADCResult>(oldADCResult+0x3B)){ //reflectivities have been reducing and are 59(0x3B) lower than maximum reflectivity reached(buffer)
-				aveADCResult=0;
-				for (i=0;i<8;i++){//perform averaging of largest result and 7 results previous
-					aveADCResult+=oldADCResultArray[ADCFilterCount];
-					ADCFilterCount+=1;
-					ADCFilterCount&=0b00000111; //modulus of 8;
-				}
-				//aveADCResult=aveADCResult/8;
-				aveADCResult>>=3; //identical to dividing by 8
-				materialArray[RL_Count].reflectance=aveADCResult;//value of oldADCResult is now maximum possible reflectivity and is added to struct array
-				tempFerrous=tempIndArray[RL_Count]; //store whether object was ferrous or non-ferrous
-				tempIndArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
-				materialArray[RL_Count].inductive=tempFerrous;//inductivity of material stored; 1 for inductive; 0 for non-ferrous
-				if(tempFerrous){ //object is metal: aluminum (light), steel (dark)
-					if (aveADCResult<AL_REFLECTIVITY) materialArray[RL_Count].type=150;//object is aluminium
-					else materialArray[RL_Count].type=50;//object is steel
-					} else { //object is plastic: white (light), black (dark)
-					if (aveADCResult<WH_REFLECTIVITY) materialArray[RL_Count].type=100;//object is white plastic
-					else materialArray[RL_Count].type=0;//object is black plastic
-				}
-				RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
-				RLEX_Count+=1;
-				oldADCResult=0x03FF;//reset oldADCResult to 0x3FF for the next objects reflectivites to be measured
-				startMeasureFlag=0x00; //set flag to zero so ADC conversions cannot occur
+			ADCAverage>>=3; //division by 8 with chopping, not rounding
+			//PORTC=ADCAverage;
+			//PORTD=((ADCAverage&0x0300)>>3); //0b01100000 if true //green green
+			////////--ODA NOTE: There isn't a point to storing reflectance, just store object type/////////
+			materialArray[RL_Count].reflectance=ADCAverage;//value of oldADCResult is now maximum possible reflectivity and is added to struct array
+			tempFerrous=inductiveArray[RL_Count]; //store whether object was ferrous or non-ferrous
+			inductiveArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
+			materialArray[RL_Count].inductive=tempFerrous;//inductivity of material stored; 1 for inductive; 0 for non-ferrous
+			if(tempFerrous){ //object is metal: aluminum (light), steel (dark)
+				if (ADCAverage<AL_REFLECTIVITY) materialArray[RL_Count].type=150;//object is aluminium
+				else materialArray[RL_Count].type=50;//object is steel
+				} else { //object is plastic: white (light), black (dark)
+				if (ADCAverage<WH_REFLECTIVITY) materialArray[RL_Count].type=100;//object is white plastic
+				else materialArray[RL_Count].type=0;//object is black plastic
 			}
-			ADCSRA |= _BV(ADSC); //re-trigger ADC
-		} else systemFlag&=0xEF; //reset flag
+			RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
+			RLEX_Count+=1;
+			ADCCompleteFlag=0x01; //set flag to tell system there is no ADC conversions occurring
+		}
+		/*
 		if (systemFlag&0x20){//if PAUSE Button is pressed
 			//print Black, White, Aluminium, and Steel Counts to screen and display how many objects are between optical sensor 2 and 3 (EX)
-		}
+		}*/
 		//// -ODA, may add too much processing which could reduce ADC Conversion accuracy; therefore, may need to add additional conditioning
-		////e.g. if ((OREX_Count) && (startMeasureFlag=0x00)) //only allow stepper to move in advance if no ADC is occurring
+		////e.g. if ((OREX_Count) && (ADCCompleteFlag=0x00)) //only allow stepper to move in advance if no ADC is occurring
 		////or maybe... if ((OREX_Count) && (OIOR_Count==0)) //when no objects are between the first and second optical sensors
-		if((RLEX_Count) && (startMeasureFlag=0x00)){//if there are objects between the OR and EX sensor that have their reflectivity quantified
+		if((RLEX_Count) && (ADCCompleteFlag)){//if there are objects between the OR and EX sensor and no ADC conversions are occurring 
 			if(stepEarlyFlag==0){
 				TCCR1B |= _BV(CS10); //clock pre-scalar (clk/1); 8ms per overflow; Starts timer
-				TCNT1=0x00; //set timer equal to zero
+				TCNT1=0x0000; //set timer equal to zero
 				if ((TIFR1 & 0x01) == 0x01)TIFR1|=0x01; //if TOV1 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
 				stepEarlyFlag=1;
 				stepEarlyCount=0;
@@ -282,6 +282,7 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	//determine direction 
 	if (steps > 0) DIRECTION = 1;// positive or clock-wise
 	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise	
+	else DIRECTION=0;
 	/*perform one stepper cycle before "for" loop so there is no wasted delay at
 	beginning or end of stepper motion*/
 	PORTAREGSet+=DIRECTION;
@@ -308,9 +309,8 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 		k=0; //reset counter for timer
 		while (k<delay){ //iterate through given count
 			if ((TIFR2 & 0x01) == 0x01){ //if overflow has occurred in counter
-				TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit
-				k+=1;
-				//equivalent; TIFR2 |= _BV(TOV2)
+				TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit;equivalent => TIFR2 |= _BV(TOV2)
+				k++;
 			}
 		}
 		PORTA = stepperSigOrd[PORTAREGSet];//move stepper after first delay
@@ -327,6 +327,7 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	*stepperPos %= 200; //represents 200 (0->199) steps of stepper positioning in a circle
 	return; //returns nothing
 }
+////--ODA: CHANGE SO NO INTERRUPT IS USED FOR HALL EFFECT, simply check for voltage on an input pin
 void stepperHome(int *stepperPos, int *stepperIt){
 	uint8_t delay = 30; //20ms corresponds to 50 steps per second
 	int i=0;
@@ -399,31 +400,44 @@ ISR(INT0_vect){ // on PD0; active low KILL SWITCH
 }
 /*sensor 1: OI: 1st Optical-Inductive-Near Inductive sensor*/
 ISR(INT1_vect){ // on PD1; active low; triggered on rising-edge
-	systemFlag|=0x01;//opt1Flag=0x01;
+	//systemFlag|=0x01;//opt1Flag=0x01;
+	OI_Count+=1;
 }
 /*sensor 2: IN: Inductive sensor*/
 ISR(INT2_vect){ //on PD3; active low; triggered on falling-edge
-	systemFlag|=0x02;//inductiveFlag=0x01;
+	inductiveFlag=0x01;
 }
 /*sensor 3: OR: 2nd Optical-Reflective-Near Reflective sensor*/
 ISR(INT3_vect){ // on PD2; active high; triggered on rising-edge
-	systemFlag|=0x04;//opt2Flag=0x01;
+	//systemFlag|=0x04;//opt2Flag=0x01;
+	lowADC=0xFFFF;
+	ADCSRA|= _BV(ADSC); //trigger ADC (i.e. begin ADC conversion)
+	OR_Count+=1;	
+	ADCCompleteFlag=0x00; // tell system ADC conversions are occurring
 }
 /*sensor 5: EX: 3rd Optical-Near exit of conveyor*/
 ISR(INT4_vect){ //on PE4; active low; triggered on falling-edge
-	systemFlag|=0x08;//optExitFlag=0x01;
+	optExitFlag=0x01;
 }
 /*ADC ISR: triggered when ADC is completed*/
 ISR(ADC_vect){
-	ADCResult = ADCL;
-	ADCResult += ADCH << 8;
-	systemFlag|=0x10;//ADCResultFlag = 1;
+	if (lowADC>ADC){ //if ADC result is still decreasing (i.e. if object's reflectivity is increasing)
+		lowADC=ADC; //ADC holds the entire 10 bit value in a 16bit variable; lowADC set for future comparison
+		lowADCArray[ADCFilterCount]=lowADC;
+		ADCFilterCount++; //increment array location being set
+		ADCFilterCount&=0b00000111; //modulus of 8
+		//highByteADC=ADCH;
+		//lowByteADC=ADCL;
+	}
+	if ((PIND&0b00000100)==0b00000100) ADCSRA|= _BV(ADSC); //if there is still an object keep initializing ADC conversions
+	else ADCResultFlag = 1;
 }
 /*sensor 6: HE: Hall Effect sensor; used for homing stepper*/
 ISR(INT6_vect){ //on PE6; Active low for hall effect sensor 
 	HallEffect=0x01;
 }
 //timer 1 overflow flag; enabled through sei();
+///Cant get to work yet
 ISR(TIMER1_OVF_vect){
 	stepEarlyCount+=1;
 	TIFR1|=0x01;
