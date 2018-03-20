@@ -15,9 +15,7 @@
 #include <avr/io.h>// the header of i/o port
 #include <avr/interrupt.h>
 #include <math.h>
-//#include "LinkedQueue.h"
 #include "interrupt.h"
-
 /*Function Declarations*/
 void stepperControl(int steps,int *stepperPos,int *stepperIt);
 void stepperHome(int *stepperPos,int *stepperIt);
@@ -25,7 +23,6 @@ void setupPWM(int motorDuty);
 void setupISR(void);
 void setupADC(void);
 void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0->100), direction possibilities {0b11,0b10,0b01,0b00}
-
 /*User Defines*/
 #define highNibMask 0xF0
 #define lowNibMask 0x0F
@@ -37,9 +34,7 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define FE_REFLECTIVITY 500 //minimum reflectivity of steel
 #define WH_REFLECTIVITY 950 //minimum reflectivity of white plastic
 #define BL_REFLECTIVITY 970 //minimum reflectivity of black plastic
-
 /*Global Variables*/
-
 volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 //volatile unsigned int systemFlag; //bits(4:0) = {ADCResultFlag,optExitFlag,opt2Flag,inductiveFlag,opt1Flag}
 volatile unsigned int stepEarlyCount;
@@ -68,10 +63,10 @@ int main(int argc, char *argv[]){
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0x00;
 	int stepperMovement = 0x00;
-	uint8_t stepEarlyFlag = 0x00;
-	int stepEarlyMovement =0x00;
-	int tempEarlyType = 0;
-	int Direction = 1;
+	//uint8_t stepEarlyFlag = 0x00;
+	//int stepEarlyMovement =0x00;
+	//int tempEarlyType = 0;
+	//int Direction = 1;
 	int tempType = 0;
 	uint16_t ADCAverage = 0; //needs to be able to hold a maximum of 0x2000
 	uint8_t BL_Count = 0x00;
@@ -99,19 +94,14 @@ int main(int argc, char *argv[]){
 	DDRB = 0xFF; /*controls dc motor: PB7=PWM signal PB3:0={INA,INB,ENA,ENB}*/
 	DDRC = 0xFF; //LEDs Debugging
 	DDRD = 0xF0; //upper nibble for on-board bi-color LEDs, interrupts on lower nibble	PORTD3:0=INT3:0
-	DDRE = 0x00; /*PE4=HallEffect for stepper*/
+	DDRE = 0x00; /*PE3=HallEffect for stepper, interrupts on upper nibble*/
 	DDRF = 0x00; /*PF1=ADC1 pin*/	
 	sei(); //enable interrupts
-	// PORTB &= 0b1110000; //apply Vcc brake to motor
-	//PORTB |=0b1000; //start motor in specified direction
 	/*initialize flags and counters*/
-	//systemFlag=0x0000;
 	OR_Count=0;
 	RL_Count=0;
 	OI_Count=0;
 	EX_Count=0;
-	//opt1Flag=0x00;
-	//opt2Flag=0x00;
 	inductiveFlag=0x00;
 	optExitFlag=0x00;
 	ADCResultFlag=0x00;	
@@ -122,18 +112,16 @@ int main(int argc, char *argv[]){
 	while(1){
 		if (inductiveFlag){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
 			inductiveFlag=0;
-			inductiveArray[((OI_Count-1)&0b00111111)]=0x01;
+			inductiveArray[(OI_Count-1)%64]=0x01;
 		}
 		if(optExitFlag){ //object has hit sensor at end of conveyor
 			optExitFlag=0; //reset flag
 			//corresponding positions (black=0;aluminum=50;white=100;steel=150)
-			//if object type matches stepper location; do nothing...
 			tempType=typeArray[EX_Count];
 			stepperMovement=stepperPosition-tempType;
 			if (stepperMovement){//if object type doesn't match stepper location; stop motor, move stepper, start motor
 				PORTB &=0xF0; //Apply Vcc brake to motor
-				//stepper rotation logic
-				//if (abs(stepperMovement)<=100) do nothing;
+				//stepper rotation logic; value of steps to rotate stepper is kept between 1:100)
 				if (abs(stepperMovement)>100){
 					if (stepperMovement<0) stepperMovement+=200;
 					else stepperMovement-=200;
@@ -156,17 +144,17 @@ int main(int argc, char *argv[]){
 				ADCFilterCount++;
 				ADCFilterCount&=0x07; //modulus of 8 with positive incrementing variables
 			}
-			ADCAverage>>=3; //division by 8 with chopping, not rounding
+			ADCAverage>>=3; //division by 8 with chopping arithmetic 
 			tempFerrous=inductiveArray[RL_Count]; //store whether object was ferrous or non-ferrous
 			inductiveArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
 			if(tempFerrous){ //object is metal: aluminum (light), steel (dark)
-				if (ADCAverage<AL_REFLECTIVITY) typeArray[RL_Count]=150;//object is aluminium
+				if (ADCAverage<AL_REFLECTIVITY) typeArray[RL_Count]=150;//object is aluminum
 				else typeArray[RL_Count]=50;//object is steel
 				} else { //object is plastic: white (light), black (dark)
 				if (ADCAverage<WH_REFLECTIVITY) typeArray[RL_Count]=100;//object is white plastic
 				else typeArray[RL_Count]=0;//object is black plastic
 			}
-			RL_Count+=1;//add one to amount of objects that have had their reflectivities measured
+			RL_Count+=1;//add one to amount of objects that have had their reflectivity's measured
 			RLEX_Count+=1;
 			ADCCompleteFlag=0x01; //set flag to tell system there is no ADC conversions occurring
 		}
@@ -174,9 +162,11 @@ int main(int argc, char *argv[]){
 		if (systemFlag&0x20){//if PAUSE Button is pressed
 			//print Black, White, Aluminium, and Steel Counts to screen and display how many objects are between optical sensor 2 and 3 (EX)
 		}*/
+
 		//// -ODA, may add too much processing which could reduce ADC Conversion accuracy; therefore, may need to add additional conditioning
 		////e.g. if ((OREX_Count) && (ADCCompleteFlag=0x00)) //only allow stepper to move in advance if no ADC is occurring
 		////or maybe... if ((OREX_Count) && (OIOR_Count==0)) //when no objects are between the first and second optical sensors
+		/*
 		if((RLEX_Count) && (ADCCompleteFlag)){//if there are objects between the OR and EX sensor and no ADC conversions are occurring 
 			if(stepEarlyFlag==0){
 				TCCR1B |= _BV(CS10); //clock pre-scalar (clk/1); 8ms per overflow; Starts timer
@@ -184,6 +174,10 @@ int main(int argc, char *argv[]){
 				if ((TIFR1 & 0x01) == 0x01)TIFR1|=0x01; //if TOV1 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
 				stepEarlyFlag=1;
 				stepEarlyCount=0;
+			}
+			else if ((TIFR1 & 0x01) == 0x01){
+				stepEarlyCount+=1;
+				TIFR1|=0x01;
 			}
 			if (stepEarlyCount>=2){ //takes >=16ms; Note that stepEarlyCount is updated in ISR
 				stepEarlyCount=0;
@@ -206,7 +200,7 @@ int main(int argc, char *argv[]){
 		} else {
 			TCCR1B&=0b11111000; //disable timer 1 
 			stepEarlyFlag=0; //re-initialize 
-		}
+		}*/
 		//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
 		OI_Count &= 0b00111111;//modulus of 64
 		RL_Count &= 0b00111111;
@@ -229,14 +223,17 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	int PORTAREGSet = *stepperIt;
 	int DIRECTION = 1;
 	uint16_t absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
+	if (steps > 0){ 
+		DIRECTION = 1;// positive or clock-wise
+		absSteps = steps;
+	} else if (steps < 0) {
+		DIRECTION = -1; //negative or counter-clock-wise
+		absSteps = abs(steps);
+	} else DIRECTION=0;		
 	if(absSteps<(differential*2)){ //if there isn't enough time for stepper to fully ramp up to full speed
 		minDelay=maxDelay-absSteps/2;
 		differential = maxDelay - minDelay;
 	}
-	//determine direction 
-	if (steps > 0) DIRECTION = 1;// positive or clock-wise
-	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise	
-	else DIRECTION=0;
 	/*perform one stepper cycle before "for" loop so there is no wasted delay at
 	beginning or end of stepper motion*/
 	PORTAREGSet+=DIRECTION;
@@ -289,16 +286,14 @@ void stepperHome(int *stepperPos, int *stepperIt){
 	uint8_t offset=2; //arbitrary at this point
 	uint8_t DIRECTION=1; //1 for clockwise, -1 for counter-clockwise
 	PORTA=0x00;
-	while (!HallEffect){
+	while (PINE&0b00001000){ //Active low for hall effect sensor triggering
 		PORTA = stepperSigOrd[i];
 		mTimer2(delay);
 		i++;
 		if (i==4)i=0;
 	}
 	i--;
-	HallEffect=0x00;
-	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6)
-	/*Insert code here to compensate for offset --ODA CURRENTLY CAUSES MISSTEP... WHY?*/
+	/*Insert code here to compensate for offset */
 	for (x=0;x<offset;x++){
 		i+=DIRECTION;
 		if (i==4)i=0;
@@ -306,8 +301,7 @@ void stepperHome(int *stepperPos, int *stepperIt){
 		PORTA = stepperSigOrd[i];
 		mTimer2(delay);
 	}
-	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
-	//PORTA = stepperSigOrd[i];
+	*stepperIt = i;//set current stepper iteration
 	*stepperPos=0; //base stepper position (on black)
 }
 /*initializing the dc motor*/
@@ -326,9 +320,9 @@ void setupISR(void){
 	//Ex: rising edge on INT2: EICRA |= _BV(ISC21) | _BV(ISC20);
 	//Ex: falling edge on INT2: EICRA |= _BV(ISC21);
 	//see ISR routines for 
-	EIMSK |=0b01011111; //initialize INT6,4:0
-	EICRA |= 0b11101110; //rising edge triggers for INT1 (OI) and INT3 (OR); falling edge detection on INT2 (IN) and INT4 (EX)
-	EICRB |= 0b00100010; //active low for INT6 and INT4
+	EIMSK |=0b00111100; //initialize INT5:2
+	EICRA |= 0b10110000; //rising edge trigger (active low) for OI (INT2); falling edge detection (active low) for IN (INT3)
+	EICRB |= 0b00001011; //rising edge trigger (active high) for OR (INT4); falling edge detection (active low) for EX (INT5)
 }
 void setupADC(void){
 	ADCSRA |= _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS0); //adc scalar = 32;
@@ -348,21 +342,22 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 }
 
 /**********INTERRUPT SERVICE ROUTINES**********/
-/*Button interrupt for emergency: shut-off dc motor, disable stepper, shut off, ensure nothing can be turned on*/
-ISR(INT0_vect){ // on PD0; active low KILL SWITCH
-	PORTB &= 0b11110000; //stop motor by applying Vcc break
+
+ISR(INT0_vect){ // on PD0; taken for LCD Screen
+}
+ISR(INT1_vect){ // on PD1; taken for LCD Screen
 }
 /*sensor 1: OI: 1st Optical-Inductive-Near Inductive sensor*/
-ISR(INT1_vect){ // on PD1; active low; triggered on rising-edge
+ISR(INT2_vect){ // on PD2; active low; triggered on rising-edge
 	//systemFlag|=0x01;//opt1Flag=0x01;
 	OI_Count+=1;
 }
 /*sensor 2: IN: Inductive sensor*/
-ISR(INT2_vect){ //on PD3; active low; triggered on falling-edge
+ISR(INT3_vect){ //on PD3; active low; triggered on falling-edge
 	inductiveFlag=0x01;
 }
 /*sensor 3: OR: 2nd Optical-Reflective-Near Reflective sensor*/
-ISR(INT3_vect){ // on PD2; active high; triggered on rising-edge
+ISR(INT4_vect){ // on PD2; active high; triggered on rising-edge
 	//systemFlag|=0x04;//opt2Flag=0x01;
 	lowADC=0xFFFF;
 	ADCSRA|= _BV(ADSC); //trigger ADC (i.e. begin ADC conversion)
@@ -370,7 +365,7 @@ ISR(INT3_vect){ // on PD2; active high; triggered on rising-edge
 	ADCCompleteFlag=0x00; // tell system ADC conversions are occurring
 }
 /*sensor 5: EX: 3rd Optical-Near exit of conveyor*/
-ISR(INT4_vect){ //on PE4; active low; triggered on falling-edge
+ISR(INT5_vect){ //on PE4; active low; triggered on falling-edge
 	optExitFlag=0x01;
 }
 /*ADC ISR: triggered when ADC is completed*/
@@ -386,16 +381,32 @@ ISR(ADC_vect){
 	if ((PIND&0b00000100)==0b00000100) ADCSRA|= _BV(ADSC); //if there is still an object keep initializing ADC conversions
 	else ADCResultFlag = 1;
 }
-/*sensor 6: HE: Hall Effect sensor; used for homing stepper*/
+ISR(INT6_vect){ //on PE6; system pause 
+/*Operation*/
+/////first button press/////
+//stop the conveyor belt
+//display count of all fully processed objects
+//display count of objects partially processed (e.g. objects that have had their reflectivity quantified, but have not hit the exit sensor)
+/////second button press/////
+//start conveyor
+}
+ISR(INT7_vect){ //on PE7; system ramp down
+	//process every item on conveyor
+	/////use delay to catch objects before first sensor
+	//halt conveyor
+	//display count of all various objects that have been sorted
+}
+/*sensor 6: HE: Hall Effect sensor; used for homing stepper
+/////MOVED TO PE3//////
 ISR(INT6_vect){ //on PE6; Active low for hall effect sensor 
 	HallEffect=0x01;
 }
+*/
 //timer 1 overflow flag; enabled through sei();
-///Cant get to work yet
+/*
 ISR(TIMER1_OVF_vect){
-	stepEarlyCount+=1;
-	TIFR1|=0x01;
-}
+
+}*/
 
 
 
