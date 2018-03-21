@@ -58,8 +58,8 @@ volatile unsigned char inductiveFlag; //an inductive flag is picked up
 volatile unsigned char optExitFlag; //object is at end of conveyor
 volatile unsigned char ADCResultFlag; //8 bits: 0 => (2^9-1); thats that ADC conversion is complete
 volatile unsigned char pauseFlag; //corresponds to a system pause function
-volatile unsigned char sysstemRampFlag; //corresponds to system ramp down function
-volatile unsigned char HallEffect; //becomes set during stepper homing to know position
+volatile unsigned char systemRampFlag; //corresponds to system ramp down function
+//volatile unsigned char HallEffect; //becomes set during stepper homing to know position
 unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
 
 /* Main Routine */
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
 	inductiveFlag=0x00;
 	optExitFlag=0x00;
 	ADCResultFlag=0x00;	
-	HallEffect=0x00; 
+	//HallEffect=0x00; 
 	stepEarlyCount=0x00;
 	PORTC=0b10101010;
 	mTimer2(2000);
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]){
 				falseInductFlag=0x00; //reset flag
 				inductiveArray[(OI_Count-1)%64]=0x01; //set the actual current object to inductive=1; modulus of 64
 			}
-		}
+		} 
 		if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
 			ADCResultFlag=0; //reset flag
 			ADCAverage=0;
@@ -153,10 +153,13 @@ int main(int argc, char *argv[]){
 			//PORTD|=((lowADC&0x0300)>>3);
 			tempFerrous=inductiveArray[RL_Count]; //store whether object was ferrous or non-ferrous
 			inductiveArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
-
+			//sorting objects by reflectivity; using inductive on black and white plastics
 			if (ADCAverage<300)typeArray[RL_Count]=150;//object is aluminum
-			else if(ADCAverage<900)typeArray[RL_Count]=50;//object is steel
-			else if(ADCAverage<955)typeArray[RL_Count]=100;//object is white
+			else if(ADCAverage<850)typeArray[RL_Count]=50;//object is steel
+			else if(ADCAverage<955){
+				if(!tempFerrous)typeArray[RL_Count]=100;//object is white
+				else typeArray[RL_Count]=50;//object is steel when it is dark
+			}
 			else{//object is non-reflective
 				if(!tempFerrous) typeArray[RL_Count]=0;//object is black plastic when no ferrous material exists
 				else typeArray[RL_Count]=50;//object is steel when it is dark			 
@@ -279,7 +282,7 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	//TCCR1B |= _BV(CS10); //clock pre-scalar (clk/1); 8ms per overflow; Starts timer1
 	//TCNT1=0x0000; //set timer equal to zero
 	//if ((TIFR1 & 0x01) == 0x01)TIFR1|=0x01; //if TOV1 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
-	stepEarlyCount =0; //reset counter for timer1
+	//stepEarlyCount =0; //reset counter for timer1
 	*stepperIt=PORTAREGSet;
 	//*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
 	*stepperPos -= steps;
