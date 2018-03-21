@@ -195,16 +195,14 @@ void stepperHome(int *stepperPos, int *stepperIt){
 	uint8_t offset=2; //arbitrary at this point
 	uint8_t DIRECTION=1; //1 for clockwise, -1 for counter-clockwise
 	PORTA=0x00;
-	while (!HallEffect){
+	while (PINE&0b00001000){ //Active low for hall effect sensor triggering
 		PORTA = stepperSigOrd[i];
 		mTimer2(delay);
 		i++;
 		if (i==4)i=0;
 	}
 	i--;
-	HallEffect=0x00;
-	EIMSK&=0b10111111;//disable hall effect sensor interrupt (INT6) 
-	/*Insert code here to compensate for offset --ODA CURRENTLY CAUSES MISSTEP... WHY?*/
+	/*Insert code here to compensate for offset */
 	for (x=0;x<offset;x++){
 		i+=DIRECTION;
 		if (i==4)i=0;
@@ -212,12 +210,8 @@ void stepperHome(int *stepperPos, int *stepperIt){
 		PORTA = stepperSigOrd[i];
 		mTimer2(delay);
 	}
-
-	//
-	*stepperIt = i;//modulus is heavy in terms of computation, but doesn't matter in this function
-	//PORTA = stepperSigOrd[i];
+	*stepperIt = i;//set current stepper iteration
 	*stepperPos=0; //base stepper position (on black)
-
 }
 /*initializing the dc motor*/
 void setupPWM(int motorDuty){
