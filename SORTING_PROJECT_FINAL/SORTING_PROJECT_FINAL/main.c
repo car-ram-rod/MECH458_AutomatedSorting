@@ -29,11 +29,11 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define DC_REVERSE 0x01 	//dc motor clock-wise
 #define DC_FORWARD 0x02	//dc motor counter-clockwise
 #define DC_BRAKE 0x00 //dc motor brake
-#define CONVEYOR_SPEED 40 //50 is maximum for sustainability
-#define AL_REFLECTIVITY 300 //minimum reflectivity of aluminum
-#define FE_REFLECTIVITY 700 //minimum reflectivity of steel
-#define WH_REFLECTIVITY 955 //minimum reflectivity of white plastic
-#define BL_REFLECTIVITY 990 //minimum reflectivity of black plastic
+#define CONVEYOR_SPEED 35 //50 is maximum for sustainability
+#define AL_REFLECTIVITY 300 //minimum reflectivity of aluminum (largest number measured is around 100)
+#define FE_REFLECTIVITY 700 //minimum reflectivity of steel (largest number measured around 500)
+#define WH_REFLECTIVITY 955 //minimum reflectivity of white plastic (highest number around 945-955)
+#define BL_REFLECTIVITY 990 //minimum reflectivity of black plastic (lowest number measured around 970)
 /*Global Variables*/
 volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 //volatile unsigned int systemFlag; //bits(4:0) = {ADCResultFlag,optExitFlag,opt2Flag,inductiveFlag,opt1Flag}
@@ -185,14 +185,11 @@ int main(int argc, char *argv[]){
 			if (stepperMovement){//if object type doesn't match stepper location; stop motor, move stepper, start motor
 				//PORTC=0b00111100;
 				PORTB &=0xF0; //Apply Vcc brake to motor
-				//stepper rotation logic; value of steps to rotate stepper is kept between 1:100)
-				
+				//stepper rotation logic; value of steps to rotate stepper is kept between 1:100)		
 				if (abs(stepperMovement)>100){
 					if (stepperMovement<0) stepperMovement+=200;
 					else stepperMovement-=200;
 				}
-				//if(stepperMovement==-150)stepperMovement=50;
-				//if(stepperMovement==150)stepperMovement=-50;
 				stepperControl(stepperMovement, &stepperPosition, &stepperIteration);//rotate stepper to proper location
 				PORTB |=0b00000100; //start motor forwards
 			}
@@ -234,19 +231,14 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	int PORTAREGSet = *stepperIt;
 	int DIRECTION = 1;
 	uint16_t absSteps = abs(steps); //compute absolute value now to save computations in "for" loop
-	if (steps > 0){ 
-		DIRECTION = 1;// positive or clock-wise
-		absSteps = steps;
-	} else if (steps < 0) {
-		DIRECTION = -1; //negative or counter-clock-wise
-		absSteps = abs(steps);
-	} else DIRECTION=0;		
+	if (steps > 0) DIRECTION = 1;// positive or clock-wise
+	else if (steps < 0) DIRECTION = -1; //negative or counter-clock-wise
+	else DIRECTION=0;		
 	if(absSteps<(differential*2)){ //if there isn't enough time for stepper to fully ramp up to full speed
 		minDelay=maxDelay-absSteps/2;
 		differential = maxDelay - minDelay;
 	}
-	/*perform one stepper cycle before "for" loop so there is no wasted delay at
-	beginning or end of stepper motion*/
+	/*perform one stepper cycle before "for" loop so there is no wasted delay at beginning or end of stepper motion*/
 	PORTAREGSet+=DIRECTION;
 	if(PORTAREGSet==4)PORTAREGSet=0;
 	if(PORTAREGSet==-1)PORTAREGSet=3;
@@ -278,14 +270,8 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 		PORTA = stepperSigOrd[PORTAREGSet];//move stepper after first delay
 	}
 	TCCR2B&=0b11111000; //disable timer 2
-	//re-enable timer 1 and re-initialize counter so the next early step doesn't occur until 16ms later, not instantly
-	//TCCR1B |= _BV(CS10); //clock pre-scalar (clk/1); 8ms per overflow; Starts timer1
-	//TCNT1=0x0000; //set timer equal to zero
-	//if ((TIFR1 & 0x01) == 0x01)TIFR1|=0x01; //if TOV1 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
-	//stepEarlyCount =0; //reset counter for timer1
-	*stepperIt=PORTAREGSet;
-	//*stepperIt=stepperSigOrd[(CURRENT_ITERATION+DIRECTION*(i-1))%4]; //set value of current iteration to variable address
-	*stepperPos -= steps;
+	*stepperIt=PORTAREGSet;//set value of current iteration to variable address of stepperIteration Variable
+	*stepperPos -= steps; //iterating through steps positively is clockwise; however, when moving clockwise position is decremented
 	*stepperPos %= 200; //represents 200 (0->199) steps of stepper positioning in a circle
 	return; //returns nothing
 }
@@ -329,9 +315,8 @@ void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
 	//Ex: rising edge on INT2: EICRA |= _BV(ISC21) | _BV(ISC20);
 	//Ex: falling edge on INT2: EICRA |= _BV(ISC21);
-	//see ISR routines for 
-	EIMSK |= _BV(INT7) |_BV(INT6)|_BV(INT3)|_BV(INT2);
-	//EIMSK |= 0b00111100; //initialize INT5:2
+	//see ISR routines interrupt functions
+	EIMSK |= _BV(INT7) |_BV(INT6)|_BV(INT3)|_BV(INT2);//initialize INT 7,6,3,2
 	EICRA |= _BV(ISC21) | _BV(ISC20) | _BV(ISC31);
 	//EICRA |= 0b10110000; //rising edge trigger (active low) for OI (INT2); falling edge detection (active low) for IN (INT3)
 	EICRB |= _BV(ISC71) | _BV(ISC70) | _BV(ISC61);
