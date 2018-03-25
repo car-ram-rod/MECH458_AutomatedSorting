@@ -37,8 +37,12 @@ SUBDIRS :=
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS +=  \
+../FrameBuffer.c \
+../glcdfont.c \
+../I2C.c \
 ../interrupt.c \
-../main.c
+../main.c \
+../SSD1306.c
 
 
 PREPROCESSING_SRCS += 
@@ -48,20 +52,36 @@ ASM_SRCS +=
 
 
 OBJS +=  \
+FrameBuffer.o \
+glcdfont.o \
+I2C.o \
 interrupt.o \
-main.o
+main.o \
+SSD1306.o
 
 OBJS_AS_ARGS +=  \
+FrameBuffer.o \
+glcdfont.o \
+I2C.o \
 interrupt.o \
-main.o
+main.o \
+SSD1306.o
 
 C_DEPS +=  \
+FrameBuffer.d \
+glcdfont.d \
+I2C.d \
 interrupt.d \
-main.d
+main.d \
+SSD1306.d
 
 C_DEPS_AS_ARGS +=  \
+FrameBuffer.d \
+glcdfont.d \
+I2C.d \
 interrupt.d \
-main.d
+main.d \
+SSD1306.d
 
 OUTPUT_FILE_PATH +=SORTING_PROJECT_FINAL.elf
 
@@ -77,6 +97,14 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
+
+
+
+
+
+
 
 
 

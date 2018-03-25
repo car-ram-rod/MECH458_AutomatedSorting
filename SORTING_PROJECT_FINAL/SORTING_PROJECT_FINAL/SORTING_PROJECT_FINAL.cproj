@@ -122,6 +122,21 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="FrameBuffer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Framebuffer.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="glcdfont.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="I2C.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="I2C.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="interrupt.c">
       <SubType>compile</SubType>
     </Compile>
@@ -129,6 +144,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="main.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="SSD1306.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="SSD1306.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>

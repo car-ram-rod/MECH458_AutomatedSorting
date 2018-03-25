@@ -16,6 +16,10 @@
 #include <avr/interrupt.h>
 #include <math.h>
 #include "interrupt.h"
+#include "SSD1306.h"
+#include "FrameBuffer.h"
+#include "I2C.h"
+#include "glcdfont.c"
 /*Function Declarations*/
 void stepperControl(int steps,int *stepperPos,int *stepperIt);
 void stepperHome(int *stepperPos,int *stepperIt);
@@ -30,17 +34,20 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 #define DC_FORWARD 0x02	//dc motor counter-clockwise
 #define DC_BRAKE 0x00 //dc motor brake
 #define CONVEYOR_SPEED 35 //50 is maximum for sustainability
-#define AL_REFLECTIVITY 300 //minimum reflectivity of aluminum (largest number measured is around 100)
-#define FE_REFLECTIVITY 700 //minimum reflectivity of steel (largest number measured around 500)
-#define WH_REFLECTIVITY 955 //minimum reflectivity of white plastic (highest number around 945-955)
-#define BL_REFLECTIVITY 990 //minimum reflectivity of black plastic (lowest number measured around 970)
+//#define AL_REFLECTIVITY 300 //minimum reflectivity of aluminum (largest number measured is around 100)
+//#define FE_REFLECTIVITY 700 //minimum reflectivity of steel (largest number measured around 500)
+//#define WH_REFLECTIVITY 955 //minimum reflectivity of white plastic (highest number around 945-955)
+//#define BL_REFLECTIVITY 990 //minimum reflectivity of black plastic (lowest number measured around 970)
 /*Global Variables*/
 volatile unsigned int ADCResult; //8 bits: 0 => (2^9-1); stores result of ADC conversion
 //volatile unsigned int systemFlag; //bits(4:0) = {ADCResultFlag,optExitFlag,opt2Flag,inductiveFlag,opt1Flag}
-volatile unsigned int stepEarlyCount;
+//volatile unsigned int stepEarlyCount;
 volatile unsigned int lowADC;
 volatile unsigned int ADCFilterCount;
-volatile unsigned int lowADCArray[8];
+volatile unsigned int lowADCArray[4];
+//volatile unsigned int lowADCArray[8];
+//volatile unsigned int lowADCArray[16];
+//volatile unsigned int lowADCArray[32];
 volatile unsigned int inductiveArray[64];
 volatile unsigned int typeArray[64];
 volatile unsigned int reflectivityArray[64];
@@ -61,7 +68,24 @@ volatile unsigned char pauseFlag; //corresponds to a system pause function
 volatile unsigned char systemRampFlag; //corresponds to system ramp down function
 //volatile unsigned char HallEffect; //becomes set during stepper homing to know position
 unsigned int stepperSigOrd[4] = {0b00110110,0b00101110,0b00101101,0b00110101};
+// Menu States
+volatile uint8_t programPause = 0;
+volatile uint8_t menuState = 0;
+volatile uint8_t barState = 1;
+volatile uint8_t rampDownSet = 0; //Might not need
+volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
 
+// Key Press State Variables
+volatile uint8_t right_key_press = 0;
+volatile uint8_t left_key_press = 0;
+volatile uint8_t down_key_press = 0;
+volatile uint8_t up_key_press = 0;
+
+// Calibration Settings
+volatile uint16_t blkCali = 990;
+volatile uint16_t whtCali = 960;
+volatile uint16_t almCali = 300;
+volatile uint16_t stlCali = 700;
 /* Main Routine */
 int main(int argc, char *argv[]){
 	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
@@ -90,19 +114,27 @@ int main(int argc, char *argv[]){
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM setup;
 	setupISR();
 	setupADC();
+	i2cInit();	// I2C initialization
+	SSD1306Init();	// OLED Initialization
+	clear();	// Clear display buffer
+	show();		// Send data/command to OLED
+	drawRunning();
+	timer0Init();
 	timer1Init();
-	timer2Init();
 	timer3Init();
 	/*Port I/O Definitions*/
-	DDRA = 0xFF; /* Sets all pins on Port A to output: stepper motor control */
+	DDRA = 0x3F; /* Sets pins 5:0 on Port A to output: stepper motor control */
 		/*stepper motor connections to MCU: PA5:0 = EN0, L1, L2, EN1, L3, L4*/
-	DDRB = 0xFF; /*controls dc motor: PB7=PWM signal PB3:0={INA,INB,ENA,ENB}*/
+		/*Hall effect sensor on PA7*/
+	DDRB = 0x10; /*controls dc motor: PB4=PWM signal*/
 	DDRC = 0xFF; //LEDs Debugging
-	DDRD = 0xF0; //upper nibble for on-board bi-color LEDs, interrupts on lower nibble	PORTD3:0=INT3:0
-	DDRE = 0x00; /*PE3=HallEffect for stepper, interrupts on upper nibble*/
+	DDRD = 0xF3; //upper nibble for on-board bi-color LEDs, interrupts on lower nibble	PORTD3:0=INT3:0
+	DDRE = 0x0F; /*interrupts on upper nibble;PE3:0={INA,INB,ENA,ENB}*/
 	DDRF = 0x00; /*PF1=ADC1 pin*/	
+	PORTB |= _BV(PB7) | _BV(PB6) | _BV(PB5)|_BV(PB3)|_BV(PB2)|_BV(PB1);//menu code
+	PORTE |= _BV(PE5) | _BV(PE4); //menu code
 	sei(); //enable interrupts
-	/*initialize flags and counters*/
+	/*initialize flags and counters */
 	OR_Count=0;
 	RL_Count=0;
 	OI_Count=0;
@@ -113,107 +145,240 @@ int main(int argc, char *argv[]){
 	optExitFlag=0x00;
 	ADCResultFlag=0x00;	
 	//HallEffect=0x00; 
-	stepEarlyCount=0x00;
+	//stepEarlyCount=0x00;
 	PORTC=0b10101010;
-	mTimer2(2000);
+	mTimer0(2000);
 	PORTC=0b00001111;
-	mTimer2(2000);
+	mTimer0(2000);
 	stepperHome(&stepperPosition,&stepperIteration); //home stepper
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	while(1){
-		if (inductiveFlag){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
-			if (falseInductFlag==0x00){
-				falseInductFlag=0x01;
-				TCCR3B |= _BV(CS30); //clock pre-scalar (clk/1); initialize clock counting
-				TCNT3=0x00; //set timer equal to zero
-				if ((TIFR3 & 0x01) == 0x01)TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
-			} //because of the closeness of interrupts OI and IN sensor, reliance on OI_Count w.r.t. inductive, delay given
-			if ((TIFR3 & 0x01) == 0x01){ //if counter has overflowed ~>8ms; time to allow OI_Count to change
-				inductiveFlag=0; //reset flag; allow flag to reset again after 8ms
-				TCCR3B&=0b11111000; //disable timer 3
-				falseInductFlag=0x00; //reset flag
-				inductiveArray[(OI_Count-1)%64]=0x01; //set the actual current object to inductive=1; modulus of 64
-			}
-		} 
-		if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
-			ADCResultFlag=0; //reset flag
-			ADCAverage=0;
-			for(i=0;i<8;i++){
-				ADCAverage+=lowADCArray[ADCFilterCount];
-				ADCFilterCount++;
-				ADCFilterCount&=0b00000111; //modulus of 8 with positive incrementing variables
-			}
-			ADCAverage>>=3; //division by 8 with chopping arithmetic
-			//reflectivityArray[RL_Count]=ADCAverage;
-			//PORTC=ADCAverage;
-			//PORTD&=0x0F;
-			//PORTD|=((ADCAverage&0x0300)>>3);
-			//PORTC=lowADC;
-			//PORTD&=0x0F;
-			//PORTD|=((lowADC&0x0300)>>3);
-			tempFerrous=inductiveArray[RL_Count]; //store whether object was ferrous or non-ferrous
-			inductiveArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
-			//sorting objects by reflectivity; using inductive on black and white plastics
-			if (ADCAverage<300)typeArray[RL_Count]=150;//object is aluminum
-			else if(ADCAverage<850)typeArray[RL_Count]=50;//object is steel
-			else if(ADCAverage<955){
-				if(!tempFerrous)typeArray[RL_Count]=100;//object is white
-				else typeArray[RL_Count]=50;//object is steel when it is dark
-			}
-			else{//object is non-reflective
-				if(!tempFerrous) typeArray[RL_Count]=0;//object is black plastic when no ferrous material exists
-				else typeArray[RL_Count]=50;//object is steel when it is dark			 
-			}
-			RL_Count++;//add one to amount of objects that have had their reflectivity's measured
-			RLEX_Count+=1;
-			OIRL_Count-=1;			
-			//ADCCompleteFlag=0x01; //set flag to tell system there is no ADC conversions occurring
-		}
-		if(optExitFlag){ //object has hit sensor at end of conveyor
-			//corresponding positions (black=0;aluminum=50;white=100;steel=150)
-			//counters are working properly with low pass filters
-			//PORTC = EX_Count;
-			//mTimer2(1000);
-			//PORTC = OI_Count;
-			//mTimer2(500);
-			//PORTC = RL_Count;
-			//mTimer2(500);
-			tempType=typeArray[EX_Count];
-			stepperMovement=stepperPosition-tempType;
-			//PORTC=typeArray[EX_Count];
-			//PORTC=stepperMovement;
-			if (stepperMovement){//if object type doesn't match stepper location; stop motor, move stepper, start motor
-				//PORTC=0b00111100;
-				PORTB &=0xF0; //Apply Vcc brake to motor
-				//stepper rotation logic; value of steps to rotate stepper is kept between 1:100)		
-				if (abs(stepperMovement)>100){
-					if (stepperMovement<0) stepperMovement+=200;
-					else stepperMovement-=200;
+		if(menuState==0){
+			programPause = 1;
+			if (inductiveFlag){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
+				if (falseInductFlag==0x00){
+					falseInductFlag=0x01;
+					TCCR3B |= _BV(CS30); //clock pre-scalar (clk/1); initialize clock counting
+					TCNT3=0x00; //set timer equal to zero
+					if ((TIFR3 & 0x01) == 0x01)TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
+				} //because of the closeness of interrupts OI and IN sensor, reliance on OI_Count w.r.t. inductive, delay given
+				if ((TIFR3 & 0x01) == 0x01){ //if counter has overflowed ~>8ms; time to allow OI_Count to change
+					inductiveFlag=0; //reset flag; allow flag to reset again after 8ms
+					TCCR3B&=0b11111000; //disable timer 3
+					falseInductFlag=0x00; //reset flag
+					inductiveArray[(OI_Count-1)%64]=0x01; //set the actual current object to inductive=1; modulus of 64
 				}
-				stepperControl(stepperMovement, &stepperPosition, &stepperIteration);//rotate stepper to proper location
-				PORTB |=0b00000100; //start motor forwards
+			} 
+			if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
+				ADCResultFlag=0; //reset flag
+				//ADCAverage=lowADC;
+				ADCAverage=0;
+				//ADCAverage=lowADC;
+				for(i=0;i<4;i++){
+					ADCAverage+=lowADCArray[ADCFilterCount];
+					ADCFilterCount++;
+					ADCFilterCount&=0b00000011; //modulus of 8 with positive incrementing variables
+				}
+				/*for(i=0;i<8;i++){
+					ADCAverage+=lowADCArray[ADCFilterCount];
+					ADCFilterCount++;
+					ADCFilterCount&=0b00000111; //modulus of 8 with positive incrementing variables
+				}*/
+				/*for(i=0;i<32;i++){
+					ADCAverage+=lowADCArray[ADCFilterCount];
+					ADCFilterCount++;
+					ADCFilterCount&=0b00011111; //modulus of 8 with positive incrementing variables
+				}*/
+				/*for(i=0;i<16;i++){
+					ADCAverage+=lowADCArray[ADCFilterCount];
+					ADCFilterCount++;
+					ADCFilterCount&=0b00001111; //modulus of 16 with positive incrementing variables
+				}*/	
+				ADCAverage>>=2; //division by 4 with chopping arithmetic
+				//ADCAverage>>=3; //division by 8 with chopping arithmetic
+				//ADCAverage>>=4; //division by 16 with chopping arithmetic
+				//ADCAverage>>=5; //division by 32 with chopping arithmetic
+				//reflectivityArray[RL_Count]=ADCAverage;
+				//PORTC=ADCAverage;
+				//PORTD&=0x0F;
+				//PORTD|=((ADCAverage&0x0300)>>3);
+				PORTC=ADCAverage&0x00FF;
+				PORTD&=0x0F;
+				PORTD|=((ADCAverage&0x0300)>>3);
+				tempFerrous=inductiveArray[RL_Count]; //store whether object was ferrous or non-ferrous
+				inductiveArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
+				//sorting objects by reflectivity; using inductive on black and white plastics
+				if (ADCAverage<300)typeArray[RL_Count]=150;//object is aluminum
+				else if(ADCAverage<850)typeArray[RL_Count]=50;//object is steel
+				else if(ADCAverage<960){
+					typeArray[RL_Count]=100;//object is white
+					//if(!tempFerrous)typeArray[RL_Count]=100;//object is white
+					//else typeArray[RL_Count]=50;//object is steel when it is dark
+				}
+				else{//object is non-reflective
+					typeArray[RL_Count]=0;//object is black plastic when no ferrous material exists
+					//if(!tempFerrous) typeArray[RL_Count]=0;//object is black plastic when no ferrous material exists
+					//else typeArray[RL_Count]=50;//object is steel when it is dark			 
+				}
+				RL_Count++;//add one to amount of objects that have had their reflectivity's measured
+				RLEX_Count+=1;
+				OIRL_Count-=1;			
+				//ADCCompleteFlag=0x01; //set flag to tell system there is no ADC conversions occurring
 			}
-			if (tempType==0)BL_Count += 0x01;
-			else if (tempType==50)ST_Count += 0x01;
-			else if (tempType==100)WH_Count += 0x01;
-			else if (tempType==150)AL_Count += 0x01;
-			RLEX_Count-=1;
-			EX_Count++;
-			optExitFlag=0; //reset flag
-		}
-		if(OIRL_Count<=0)OI_Count=RL_Count; //OI optical sensor is unreliable;set equal to RL sensor count if no objects between sensors
-		/*
-		if (pauseFlag){//if PAUSE Button is pressed
-			//print Black, White, Aluminium, and Steel Counts to screen and display how many objects are between optical sensor 2 and 3 (EX)
-		}
-		if (rampDownFlag){//if RAMP DOWN Button is pressed
+			if(optExitFlag){ //object has hit sensor at end of conveyor
+				//corresponding positions (black=0;aluminum=50;white=100;steel=150)
+				//counters are working properly with low pass filters
+				//PORTC = EX_Count;
+				//mTimer2(1000);
+				//PORTC = OI_Count;
+				//mTimer2(500);
+				//PORTC = RL_Count;
+				//mTimer2(500);
+				tempType=typeArray[EX_Count];
+				stepperMovement=stepperPosition-tempType;
+				//PORTC=typeArray[EX_Count];
+				//PORTC=stepperMovement;
+				if (stepperMovement){//if object type doesn't match stepper location; stop motor, move stepper, start motor
+					//PORTC=0b00111100;
+					PORTE &=0xF0; //Apply Vcc brake to motor
+					//stepper rotation logic; value of steps to rotate stepper is kept between 1:100)		
+					if (abs(stepperMovement)>100){
+						if (stepperMovement<0) stepperMovement+=200;
+						else stepperMovement-=200;
+					}
+					stepperControl(stepperMovement, &stepperPosition, &stepperIteration);//rotate stepper to proper location
+					PORTE |=0b00000100; //start motor forwards
+				}
+				if (tempType==0)BL_Count += 0x01;
+				else if (tempType==50)ST_Count += 0x01;
+				else if (tempType==100)WH_Count += 0x01;
+				else if (tempType==150)AL_Count += 0x01;
+				RLEX_Count-=1;
+				EX_Count++;
+				optExitFlag=0; //reset flag
+			}
+			if(OIRL_Count<=0)OI_Count=RL_Count; //OI optical sensor is unreliable;set equal to RL sensor count if no objects between sensors
+			/*
+			if (pauseFlag){//if PAUSE Button is pressed
+				//print Black, White, Aluminium, and Steel Counts to screen and display how many objects are between optical sensor 2 and 3 (EX)
+			}
+			if (rampDownFlag){//if RAMP DOWN Button is pressed
+				//
+			}*/
+			//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
+			OI_Count &= 0b00111111;//modulus of 64
+			RL_Count &= 0b00111111;
+			OR_Count &= 0b00111111;
+			EX_Count &= 0b00111111;
+		}//end of sort code
+		if(menuState==1){//pause function
+			if(rampDownSet==0){
+				drawPause(34);
+				programPause = 0;
+				}else if(rampDownSet==1){
+				clear();
+				drawString(24,24, "Complete");
+				show();
+				programPause = 0;
+			}
+		} // End menuState 1
+		
+		// Ramp Down
+		if(menuState==2){
+			
+			clear(); //to clear display buffer
+			drawString(12,16, "Ramp Down");
+			show();
+			
+			//When finished Ramp Down
+			//mTimer(10); // Remove, placeholder to simulated that sorting has finished
+			menuState=1;
+			
+		} // End menuState 2
+		
+		// Calibrate Menu
+		if(menuState==3){
+			programPause = 1;
+			clear();
+			drawCalibrateADC();
+			drawSelectBar(barState);
+			show();
+			
+			if(right_key_press){
+				right_key_press = 0;
+				barState=barState+1;
+				if(barState > 4) {
+					barState = 1;
+				}
+			}
+			
+			if(left_key_press){
+				left_key_press = 0;
+				barState = barState -1;
+				if(barState < 1) {
+					barState = 4;
+				}
+			}
+		} // End menuState 3
+		
+		// Object Colour Calibration
+		if(menuState==4){
+			
+			switch(barState)
+			{
+				// Draw Black
+				case selBlack:
+				if(up_key_press==1){
+					up_key_press=0;
+					blkCali++;
+					}else if(down_key_press==1){
+					down_key_press=0;
+					blkCali--;
+				}
+				drawBlackCali(blkCali);
+				break;
+				
+				// Draw White
+				case selWhite:
+				if(up_key_press==1){
+					up_key_press=0;
+					whtCali++;
+					}else if(down_key_press==1){
+					down_key_press=0;
+					whtCali--;
+				}
+				drawWhiteCali(whtCali);
+				break;
+				
+				// Draw Aluminum
+				case selAlum:
+				if(up_key_press==1){
+					up_key_press=0;
+					almCali++;
+					}else if(down_key_press==1){
+					down_key_press=0;
+					almCali--;
+				}
+				drawAluminumCali(almCali);
+				break;
+				
+				// Draw Steel
+				case selSteel:
+				if(up_key_press==1){
+					up_key_press=0;
+					stlCali++;
+					}else if(down_key_press==1){
+					down_key_press=0;
+					stlCali--;
+				}
+				drawSteelCali(stlCali);
+				break;
+				
+			}// end switch
+		}//end menuState 4	
+		if (menuState==5){
 			//
-		}*/
-		//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
-		OI_Count &= 0b00111111;//modulus of 64
-		RL_Count &= 0b00111111;
-		OR_Count &= 0b00111111;
-		EX_Count &= 0b00111111;
+		}	
 	}
 	return (0); //This line returns a 0 value to the calling program
 	// generally means no error was returned
@@ -242,10 +407,9 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 	PORTAREGSet+=DIRECTION;
 	if(PORTAREGSet==4)PORTAREGSet=0;
 	if(PORTAREGSet==-1)PORTAREGSet=3;
-	//TCCR1B &= 0b11111000; //disable timer1; needed due to automated counter in ISR that may cause missed steps
-	TCCR2B |= _BV(CS20) | _BV(CS21); //clock pre-scalar (clk/32)
-	TCNT2=0x00; //set timer equal to zero; note timer is already counting based on clock prescalar
-	if ((TIFR2 & 0x01) == 0x01)TIFR2|=0x01; //if TOV2 flag is set to 1, reset it to zero
+	TCCR0B |= _BV(CS01); //clock pre-scalar (clk/8)
+	TCNT0=0x00; //set timer equal to zero; note timer is already counting based on clock prescalar
+	if ((TIFR0 & 0x01) == 0x01)TIFR0|=0x01; //if TOV0 flag is set to 1, reset it to zero
 	PORTA = stepperSigOrd[PORTAREGSet];//initialize first step
 	for(i=2;i<=absSteps;i++){	
 		//ramp up
@@ -261,15 +425,15 @@ void stepperControl(int steps,int *stepperPos, int *stepperIt){
 		if(PORTAREGSet==4)PORTAREGSet=0;
 		if(PORTAREGSet==-1)PORTAREGSet=3;
 		k=0; //reset counter for timer
-		while (k<delay){ //iterate through given count
-			if ((TIFR2 & 0x01) == 0x01){ //if overflow has occurred in counter
-				TIFR2|=0x01; //reset overflow flag by writing a 1 to TOV2 bit;equivalent => TIFR2 |= _BV(TOV2)
+		while (k<(delay*4)){ //iterate through given count; multiplied by four as it is now a 250ms timer
+			if ((TIFR0 & 0x01) == 0x01){ //if overflow has occurred in counter
+				TIFR0|=0x01; //reset overflow flag by writing a 1 to TOV2 bit;equivalent => TIFR2 |= _BV(TOV2)
 				k++;
 			}
 		}
 		PORTA = stepperSigOrd[PORTAREGSet];//move stepper after first delay
 	}
-	TCCR2B&=0b11111000; //disable timer 2
+	TCCR0B&=0b11111000; //disable timer 0
 	*stepperIt=PORTAREGSet;//set value of current iteration to variable address of stepperIteration Variable
 	*stepperPos -= steps; //iterating through steps positively is clockwise; however, when moving clockwise position is decremented
 	*stepperPos %= 200; //represents 200 (0->199) steps of stepper positioning in a circle
@@ -283,9 +447,9 @@ void stepperHome(int *stepperPos, int *stepperIt){
 	uint8_t offset=2; //arbitrary at this point
 	uint8_t DIRECTION=1; //1 for clockwise, -1 for counter-clockwise
 	PORTA=0x00;
-	while (PINE&0b00001000){ //Active low for hall effect sensor triggering
+	while (PINA&0b10000000){ //Active low for hall effect sensor triggering
 		PORTA = stepperSigOrd[i];
-		mTimer2(delay);
+		mTimer0(delay);
 		i++;
 		if (i==4)i=0;
 	}
@@ -296,7 +460,7 @@ void stepperHome(int *stepperPos, int *stepperIt){
 		if (i==4)i=0;
 		if (i==-1)i=3;
 		PORTA = stepperSigOrd[i];
-		mTimer2(delay);
+		mTimer0(delay);
 	}
 	*stepperIt = i;//set current stepper iteration
 	*stepperPos=0; //base stepper position (on black)
@@ -305,21 +469,23 @@ void stepperHome(int *stepperPos, int *stepperIt){
 void setupPWM(int motorDuty){
 	uint8_t dutyCycle = 0;
 	/*DC MOTOR PWM SETUP (runs conveyor)*/
-	TCCR0A |= _BV(WGM00) | _BV(WGM01) | _BV(COM0A1); /*set to Fast PWM; OCRx updated at TOP; TOV set on MAX; Clear OC0A on Compare Match, set OC0A at TOP*/
-	TCCR0B |= _BV(CS01) | _BV(CS00);//Set clock pre-scalar (8MHz*1/64): 488Hz measured on PB7*
+	TCCR2A |= _BV(WGM20) | _BV(WGM21) | _BV(COM2A1); /*set to Fast PWM; OCRx updated at TOP; TOV set on MAX; Clear OC0A on Compare Match, set OC0A at TOP*/
+	TCCR2B |= _BV(CS22);//Set clock pre-scalar (8MHz*1/64): 488Hz measured on PB4*
 	dutyCycle = motorDuty*2.55;
-	OCR0A = dutyCycle;//set duty cycle/start motor
-	PORTB &= 0xF0; //Apply Vcc brake to conveyor
+	OCR2A = dutyCycle;//set duty cycle/start motor
+	PORTE &= 0xF0; //Apply Vcc brake to conveyor
 }
 void setupISR(void){
 	/*INT(7:4) => PE(7:4); INT(3:0) => PD(3:0)*/
 	//Ex: rising edge on INT2: EICRA |= _BV(ISC21) | _BV(ISC20);
 	//Ex: falling edge on INT2: EICRA |= _BV(ISC21);
 	//see ISR routines interrupt functions
-	EIMSK |= _BV(INT7) |_BV(INT6)|_BV(INT3)|_BV(INT2);//initialize INT 7,6,3,2
+	EIMSK |= _BV(INT7) |_BV(INT6)|_BV(INT5)|_BV(INT4)|_BV(INT3)|_BV(INT2);//initialize INT 7,6,3,2
 	EICRA |= _BV(ISC21) | _BV(ISC20) | _BV(ISC31);
 	//EICRA |= 0b10110000; //rising edge trigger (active low) for OI (INT2); falling edge detection (active low) for IN (INT3)
-	EICRB |= _BV(ISC71) | _BV(ISC70) | _BV(ISC61);
+	EICRB |= _BV(ISC71) | _BV(ISC61) | _BV(ISC60) | _BV(ISC51) | _BV(ISC41);
+	PCICR |= _BV(PCIE0); // Enable PC Interrupt
+	PCMSK0 |= 0b11101110; // Select PCINT7, PCINT6, PCINT5, PCINT3, PCINT2, PCINT1
 	//EICRB |= 0b00001011; //rising edge trigger (active high) for OR (INT6); falling edge detection (active low) for EX (INT7)
 }
 void setupADC(void){
@@ -331,8 +497,8 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 	uint8_t dutyCycle = 0;
 	static uint8_t oldDirection;
 	if((oldDirection & 0b00000011) != d){ //if current direction doesn't match new direction
-		PORTB &= 0b11110000; //apply Vcc Brake
-		PORTB |= ((~d & 0b11) << 2); //start motor in specified direction
+		PORTE &= 0b11110000; //apply Vcc Brake
+		PORTE |= ((~d & 0b11) << 2); //start motor in specified direction
 		oldDirection=d;
 	}
 	dutyCycle = s*2.55;
@@ -371,35 +537,53 @@ ISR(ADC_vect){
 		lowADC=ADC; //ADC holds the entire 10 bit value in a 16bit variable; lowADC set for future comparison
 		lowADCArray[ADCFilterCount]=lowADC;
 		ADCFilterCount++; //increment array location being set
-		ADCFilterCount&=0b00000111; //modulus of 8
+		//ADCFilterCount&=0b00000111; //modulus of 8
+		//ADCFilterCount&=0b00001111; //modulus of 16
+		//ADCFilterCount&=0b00011111; //modulus of 32
+		ADCFilterCount&=0b000000011; //modulus of 4
 		//highByteADC=ADCH;
 		//lowByteADC=ADCL;
 	}
-	if (PINE&0b00010000) ADCSRA|= _BV(ADSC); //if there is still an object keep initializing ADC conversions
+	if (PINE&0b01000000) ADCSRA|= _BV(ADSC); //if there is still an object in OR beam keep initializing ADC conversions
 	//if (ADC<(lowADC+40)) ADCSRA|= _BV(ADSC); //if there is still an object keep initializing ADC conversions
 	else ADCResultFlag = 1;
 }
-/*
-ISR(INT6_vect){ //on PE6; system pause 
-/////first button press/////
-//stop the conveyor belt
-//display count of all fully processed objects
-//display count of objects partially processed (e.g. objects that have had their reflectivity quantified, but have not hit the exit sensor)
-/////second button press/////
-//start conveyor
+// Joystick - Right
+ISR(INT4_vect){ //on PD3; active low
+	right_key_press=1;
 }
-ISR(INT7_vect){ //on PE7; system ramp down
-	//process every item on conveyor
-	/////use delay to catch objects before first sensor
-	//halt conveyor
-	//display count of all various objects that have been sorted
-}
-*/
-//timer 1 overflow flag; enabled through sei();
-/*
-ISR(TIMER1_OVF_vect){
 
-}*/
+// Joystick - Down
+ISR(INT5_vect){ //on PE4; active low
+	//PORTC ^= _BV(PC6);
+	down_key_press=1;
+}
+
+ISR(PCINT0_vect){
+	uint8_t changedbits;
+	changedbits = PINB ^ portbhistory;
+	portbhistory = PINB;
+	// Joystick UP - PORTB7
+	if(changedbits & (1 << PB7)) up_key_press=1;
+	// Joystick LEFT - PORTB6
+	if(changedbits & (1 << PB6)) left_key_press=1;
+	// Joystick SELECT - PORTB5
+	if(changedbits & (1 << PB5)) if(menuState==3) menuState = 4;
+	// Calibrate Screen Button - PORTB3
+	if(changedbits & (1 << PB3)) menuState = 3;	
+	// Ramp Down - PORTB2
+	if(changedbits & (1 << PB2))
+	{
+		rampDownSet = 1;
+		menuState = 2;
+	}	
+	// Pause/Resume Button - PORTB1
+	if(changedbits & (1 << PB1))
+	{
+		if(programPause==0)menuState = 0; 
+		else if(programPause==1) menuState = 1;
+	}	
+}// End PCINT0
 
 
 
