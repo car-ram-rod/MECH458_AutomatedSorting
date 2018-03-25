@@ -74,13 +74,11 @@ volatile uint8_t menuState = 0;
 volatile uint8_t barState = 1;
 volatile uint8_t rampDownSet = 0; //Might not need
 volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
-
 // Key Press State Variables
 volatile uint8_t right_key_press = 0;
 volatile uint8_t left_key_press = 0;
 volatile uint8_t down_key_press = 0;
 volatile uint8_t up_key_press = 0;
-
 // Calibration Settings
 volatile uint16_t blkCali = 990;
 volatile uint16_t whtCali = 960;
@@ -95,20 +93,19 @@ int main(int argc, char *argv[]){
 	int stepperPosition = 0x00; //stepper position w.r.t. 360 degrees (circle); steps 0-200 => degrees 0-360
 	int stepperIteration = 0x00;
 	int stepperMovement = 0x00;
-	//uint8_t stepEarlyFlag = 0x00;
-	//int stepEarlyMovement =0x00;
-	//int tempEarlyType = 0;
-	//int Direction = 1;
 	int tempType = 0;
 	uint8_t falseInductFlag=0x00;
 	uint8_t BL_Count = 0x00;
 	uint8_t WH_Count = 0x00;
 	uint8_t ST_Count = 0x00;
 	uint8_t AL_Count = 0x00;
-	//int OIEX_Count = 0x00; //count of objects between optical sensors 1 and 3 (Exit sensor)
-	//int OREX_Count = 0x00; //count of objects between optical sensors 2 and 3 (Exit sensor)
 	int RLEX_Count = 0x00; //count of objects that have had their reflectivity measured, but not reached sensor 3 (EX)
 	uint8_t tempFerrous=0;
+	uint8_t objTestCount=0;//variables used in menuState==5 to show min, max, and average "minimum" ADC values of objects
+	uint16_t minADCTest=0xFFFF;
+	uint16_t maxADCTest=0xFFFF;
+	uint16_t aveADCTest=0;
+	uint16_t ADCTestArray[8]={0};
 	/*initializations*/
 	cli(); //disable interrupts
 	setupPWM(CONVEYOR_SPEED); //DC Motor PWM setup;
@@ -153,7 +150,7 @@ int main(int argc, char *argv[]){
 	stepperHome(&stepperPosition,&stepperIteration); //home stepper
 	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	while(1){
-		if(menuState==0){
+		while(menuState==0){
 			programPause = 1;
 			if (inductiveFlag){ //triggered on a falling edge when a ferrous material is in front of inductive sensor
 				if (falseInductFlag==0x00){
@@ -198,16 +195,12 @@ int main(int argc, char *argv[]){
 				//ADCAverage>>=3; //division by 8 with chopping arithmetic
 				//ADCAverage>>=4; //division by 16 with chopping arithmetic
 				//ADCAverage>>=5; //division by 32 with chopping arithmetic
-				//reflectivityArray[RL_Count]=ADCAverage;
-				//PORTC=ADCAverage;
-				//PORTD&=0x0F;
-				//PORTD|=((ADCAverage&0x0300)>>3);
 				PORTC=ADCAverage&0x00FF;
 				PORTD&=0x0F;
 				PORTD|=((ADCAverage&0x0300)>>3);
 				tempFerrous=inductiveArray[RL_Count]; //store whether object was ferrous or non-ferrous
 				inductiveArray[RL_Count]=0x00; //reset inductive array to zero; otherwise, array will produce errors if more than 64 objects are sorted
-				//sorting objects by reflectivity; using inductive on black and white plastics
+				//sorting objects by reflectivity
 				if (ADCAverage<300)typeArray[RL_Count]=150;//object is aluminum
 				else if(ADCAverage<850)typeArray[RL_Count]=50;//object is steel
 				else if(ADCAverage<960){
@@ -236,8 +229,6 @@ int main(int argc, char *argv[]){
 				//mTimer2(500);
 				tempType=typeArray[EX_Count];
 				stepperMovement=stepperPosition-tempType;
-				//PORTC=typeArray[EX_Count];
-				//PORTC=stepperMovement;
 				if (stepperMovement){//if object type doesn't match stepper location; stop motor, move stepper, start motor
 					//PORTC=0b00111100;
 					PORTE &=0xF0; //Apply Vcc brake to motor
@@ -258,13 +249,6 @@ int main(int argc, char *argv[]){
 				optExitFlag=0; //reset flag
 			}
 			if(OIRL_Count<=0)OI_Count=RL_Count; //OI optical sensor is unreliable;set equal to RL sensor count if no objects between sensors
-			/*
-			if (pauseFlag){//if PAUSE Button is pressed
-				//print Black, White, Aluminium, and Steel Counts to screen and display how many objects are between optical sensor 2 and 3 (EX)
-			}
-			if (rampDownFlag){//if RAMP DOWN Button is pressed
-				//
-			}*/
 			//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
 			OI_Count &= 0b00111111;//modulus of 64
 			RL_Count &= 0b00111111;
@@ -284,16 +268,13 @@ int main(int argc, char *argv[]){
 		} // End menuState 1
 		
 		// Ramp Down
-		if(menuState==2){
-			
+		if(menuState==2){			
 			clear(); //to clear display buffer
 			drawString(12,16, "Ramp Down");
-			show();
-			
+			show();			
 			//When finished Ramp Down
 			//mTimer(10); // Remove, placeholder to simulated that sorting has finished
-			menuState=1;
-			
+			menuState=1;		
 		} // End menuState 2
 		
 		// Calibrate Menu
@@ -302,16 +283,14 @@ int main(int argc, char *argv[]){
 			clear();
 			drawCalibrateADC();
 			drawSelectBar(barState);
-			show();
-			
+			show();		
 			if(right_key_press){
 				right_key_press = 0;
 				barState=barState+1;
 				if(barState > 4) {
 					barState = 1;
 				}
-			}
-			
+			}		
 			if(left_key_press){
 				left_key_press = 0;
 				barState = barState -1;
@@ -320,10 +299,8 @@ int main(int argc, char *argv[]){
 				}
 			}
 		} // End menuState 3
-		
 		// Object Colour Calibration
-		if(menuState==4){
-			
+		if(menuState==4){		
 			switch(barState)
 			{
 				// Draw Black
@@ -337,47 +314,66 @@ int main(int argc, char *argv[]){
 				}
 				drawBlackCali(blkCali);
 				break;
-				
 				// Draw White
 				case selWhite:
-				if(up_key_press==1){
-					up_key_press=0;
-					whtCali++;
-					}else if(down_key_press==1){
-					down_key_press=0;
-					whtCali--;
-				}
-				drawWhiteCali(whtCali);
-				break;
-				
+					if(up_key_press==1){
+						up_key_press=0;
+						whtCali++;
+						}else if(down_key_press==1){
+						down_key_press=0;
+						whtCali--;
+					}
+					drawWhiteCali(whtCali);
+					break;
 				// Draw Aluminum
 				case selAlum:
-				if(up_key_press==1){
-					up_key_press=0;
-					almCali++;
-					}else if(down_key_press==1){
-					down_key_press=0;
-					almCali--;
-				}
-				drawAluminumCali(almCali);
-				break;
-				
+					if(up_key_press==1){
+						up_key_press=0;
+						almCali++;
+						}else if(down_key_press==1){
+						down_key_press=0;
+						almCali--;
+					}
+					drawAluminumCali(almCali);
+					break;
 				// Draw Steel
 				case selSteel:
-				if(up_key_press==1){
-					up_key_press=0;
-					stlCali++;
-					}else if(down_key_press==1){
-					down_key_press=0;
-					stlCali--;
-				}
-				drawSteelCali(stlCali);
-				break;
-				
+					if(up_key_press==1){
+						up_key_press=0;
+						stlCali++;
+						}else if(down_key_press==1){
+						down_key_press=0;
+						stlCali--;
+					}
+					drawSteelCali(stlCali);
+					break;			
 			}// end switch
 		}//end menuState 4	
 		if (menuState==5){
-			//
+			objTestCount=0;
+			while((menuState==5) && (objTestCount<8)){
+				if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
+					ADCResultFlag=0; //reset flag
+					ADCAverage=0;
+					for(i=0;i<4;i++){
+						ADCAverage+=lowADCArray[ADCFilterCount];
+						ADCFilterCount++;
+						ADCFilterCount&=0b00000011; //modulus of 8 with positive incrementing variables
+					}	
+					ADCAverage>>=2; //division by 4 with chopping arithmetic
+					ADCTestArray[objTestCount]=ADCAverage;
+					if(objTestCount==0)maxADCTest=ADCAverage;//initialize max value found on first object
+					if(ADCAverage<minADCTest)minADCTest=ADCAverage;
+					if(ADCAverage>maxADCTest)maxADCTest=ADCAverage;					
+					objTestCount++;
+				}
+			}
+			aveADCTest=0;
+			if(objTestCount==8){//if 8 objects have had reflectivity quantified, print result to screen
+				for(i=0;i<8;i++) aveADCTest+=ADCTestArray[i];
+				aveADCTest>>=3; //division by 8 with chopping
+				//print minADCTest, maxADCTest, and aveADCTest to screen
+			}
 		}	
 	}
 	return (0); //This line returns a 0 value to the calling program
@@ -513,8 +509,10 @@ ISR(INT1_vect){ // on PD1; taken for LCD Screen
 }
 /*sensor 1: OI: 1st Optical-Inductive-Near Inductive sensor*/
 ISR(INT2_vect){ // on PD2; active low; triggered on rising-edge
-	OI_Count+=1;
-	OIRL_Count+=1;
+	if(menuState<2){ //only adds to counters if in sorting mode or pause mode
+		OI_Count+=1;
+		OIRL_Count+=1;	
+	}
 }
 /*sensor 2: IN: Inductive sensor*/
 ISR(INT3_vect){ //on PD3; active low; triggered on falling-edge
