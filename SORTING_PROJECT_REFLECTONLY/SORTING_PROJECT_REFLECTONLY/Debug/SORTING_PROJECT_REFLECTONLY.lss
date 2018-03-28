@@ -7,7 +7,7 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, ALLOC, LOAD, DATA
   1 .text         000022fe  00000000  00000000  00000094  2**1
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  2 .bss          000004a4  008001a8  008001a8  0000243a  2**0
+  2 .bss          0000049c  008001a8  008001a8  0000243a  2**0
                   ALLOC
   3 .comment      0000005c  00000000  00000000  0000243a  2**0
                   CONTENTS, READONLY
@@ -15,19 +15,19 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY
   5 .debug_aranges 00000228  00000000  00000000  000024d8  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_info   00003f0b  00000000  00000000  00002700  2**0
+  6 .debug_info   00003ee4  00000000  00000000  00002700  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_abbrev 00001117  00000000  00000000  0000660b  2**0
+  7 .debug_abbrev 00001117  00000000  00000000  000065e4  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   0000192b  00000000  00000000  00007722  2**0
+  8 .debug_line   0000192b  00000000  00000000  000076fb  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_frame  00000758  00000000  00000000  00009050  2**2
+  9 .debug_frame  00000758  00000000  00000000  00009028  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    00000baf  00000000  00000000  000097a8  2**0
+ 10 .debug_str    00000ba3  00000000  00000000  00009780  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00002535  00000000  00000000  0000a357  2**0
+ 11 .debug_loc    00002535  00000000  00000000  0000a323  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 00000260  00000000  00000000  0000c88c  2**0
+ 12 .debug_ranges 00000260  00000000  00000000  0000c858  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -405,7 +405,7 @@ Disassembly of section .text:
      2f0:	44 28       	or	r4, r4
      2f2:	10 28       	or	r1, r0
      2f4:	44 4c       	sbci	r20, 0xC4	; 196
-     2f6:	90 90 90 7c 	lds	r9, 0x7C90	; 0x807c90 <__bss_end+0x7644>
+     2f6:	90 90 90 7c 	lds	r9, 0x7C90	; 0x807c90 <__bss_end+0x764c>
      2fa:	44 64       	ori	r20, 0x44	; 68
      2fc:	54 4c       	sbci	r21, 0xC4	; 196
      2fe:	44 00       	.word	0x0044	; ????
@@ -773,7 +773,7 @@ Disassembly of section .text:
      5c2:	1d 92       	st	X+, r1
 
 000005c4 <.do_clear_bss_start>:
-     5c4:	ac 34       	cpi	r26, 0x4C	; 76
+     5c4:	a4 34       	cpi	r26, 0x44	; 68
      5c6:	b2 07       	cpc	r27, r18
      5c8:	e1 f7       	brne	.-8      	; 0x5c2 <.do_clear_bss_loop>
      5ca:	4e d5       	rcall	.+2716   	; 0x1068 <main>
@@ -2612,7 +2612,7 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
 	if((oldDirection & 0b00000011) != d){ //if current direction doesn't match new direction
     101c:	26 2f       	mov	r18, r22
     101e:	30 e0       	ldi	r19, 0x00	; 0
-    1020:	40 91 a8 05 	lds	r20, 0x05A8	; 0x8005a8 <oldDirection.2263>
+    1020:	40 91 a8 05 	lds	r20, 0x05A8	; 0x8005a8 <oldDirection.2262>
     1024:	43 70       	andi	r20, 0x03	; 3
     1026:	50 e0       	ldi	r21, 0x00	; 0
     1028:	42 17       	cp	r20, r18
@@ -2635,7 +2635,7 @@ void motorControl(int s, uint8_t d){//note that DC motor driver expects inverted
     1046:	24 2b       	or	r18, r20
     1048:	2e b9       	out	0x0e, r18	; 14
 		oldDirection=d;
-    104a:	60 93 a8 05 	sts	0x05A8, r22	; 0x8005a8 <oldDirection.2263>
+    104a:	60 93 a8 05 	sts	0x05A8, r22	; 0x8005a8 <oldDirection.2262>
 	}
 	dutyCycle = s*2.55;
     104e:	bc 01       	movw	r22, r24
@@ -2762,23 +2762,23 @@ int main(int argc, char *argv[]){
 	/*initialize flags and counters */
 	OR_Count=0;
     10e8:	10 92 31 06 	sts	0x0631, r1	; 0x800631 <RL_Count>
-    10ec:	10 92 4a 06 	sts	0x064A, r1	; 0x80064a <OI_Count+0x1>
+    10ec:	10 92 42 06 	sts	0x0642, r1	; 0x800642 <OI_Count+0x1>
 	RL_Count=0;
-    10f0:	10 92 49 06 	sts	0x0649, r1	; 0x800649 <OI_Count>
+    10f0:	10 92 41 06 	sts	0x0641, r1	; 0x800641 <OI_Count>
     10f4:	10 92 35 06 	sts	0x0635, r1	; 0x800635 <EX_Count+0x1>
 	OI_Count=0;
     10f8:	10 92 34 06 	sts	0x0634, r1	; 0x800634 <EX_Count>
-    10fc:	10 92 4b 06 	sts	0x064B, r1	; 0x80064b <optExitFlag>
+    10fc:	10 92 43 06 	sts	0x0643, r1	; 0x800643 <optExitFlag>
 	EX_Count=0;
     1100:	10 92 33 06 	sts	0x0633, r1	; 0x800633 <ADCResultFlag>
-    1104:	10 92 48 06 	sts	0x0648, r1	; 0x800648 <rampFlag>
+    1104:	10 92 40 06 	sts	0x0640, r1	; 0x800640 <rampFlag>
 	optExitFlag=0x00;
     1108:	10 92 ae 05 	sts	0x05AE, r1	; 0x8005ae <menuState>
 	ADCResultFlag=0x00;	
     110c:	10 92 38 06 	sts	0x0638, r1	; 0x800638 <buttonPressed>
 	rampFlag=0;
 	menuState=0;
-    1110:	10 92 45 06 	sts	0x0645, r1	; 0x800645 <doublePressCount>
+    1110:	10 92 3d 06 	sts	0x063D, r1	; 0x80063d <doublePressCount>
 	buttonPressed=0;
     1114:	8a ea       	ldi	r24, 0xAA	; 170
 	doublePressCount=0;
@@ -2947,8 +2947,8 @@ int main(int argc, char *argv[]){
 		while(menuState==0){
 			if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
     11a6:	10 92 33 06 	sts	0x0633, r1	; 0x800633 <ADCResultFlag>
-    11aa:	80 91 46 06 	lds	r24, 0x0646	; 0x800646 <lowADC>
-    11ae:	90 91 47 06 	lds	r25, 0x0647	; 0x800647 <lowADC+0x1>
+    11aa:	80 91 3e 06 	lds	r24, 0x063E	; 0x80063e <lowADC>
+    11ae:	90 91 3f 06 	lds	r25, 0x063F	; 0x80063f <lowADC+0x1>
 				ADCResultFlag=0; //reset flag
     11b2:	90 93 37 06 	sts	0x0637, r25	; 0x800637 <ADCAverage+0x1>
 				ADCAverage=lowADC;
@@ -3047,7 +3047,7 @@ int main(int argc, char *argv[]){
     1296:	3f ef       	ldi	r19, 0xFF	; 255
     1298:	e3 1a       	sub	r14, r19
     129a:	f3 0a       	sbc	r15, r19
-    129c:	80 91 4b 06 	lds	r24, 0x064B	; 0x80064b <optExitFlag>
+    129c:	80 91 43 06 	lds	r24, 0x0643	; 0x800643 <optExitFlag>
 				RLEX_Count+=1;
     12a0:	88 23       	and	r24, r24
     12a2:	09 f4       	brne	.+2      	; 0x12a6 <main+0x23e>
@@ -3149,17 +3149,17 @@ int main(int argc, char *argv[]){
 				EX_Count++;
     1340:	90 93 35 06 	sts	0x0635, r25	; 0x800635 <EX_Count+0x1>
     1344:	80 93 34 06 	sts	0x0634, r24	; 0x800634 <EX_Count>
-    1348:	10 92 4b 06 	sts	0x064B, r1	; 0x80064b <optExitFlag>
-    134c:	80 91 49 06 	lds	r24, 0x0649	; 0x800649 <OI_Count>
-    1350:	90 91 4a 06 	lds	r25, 0x064A	; 0x80064a <OI_Count+0x1>
+    1348:	10 92 43 06 	sts	0x0643, r1	; 0x800643 <optExitFlag>
+    134c:	80 91 41 06 	lds	r24, 0x0641	; 0x800641 <OI_Count>
+    1350:	90 91 42 06 	lds	r25, 0x0642	; 0x800642 <OI_Count+0x1>
 				optExitFlag=0; //reset flag
     1354:	8f 73       	andi	r24, 0x3F	; 63
 			}
 			//efficient modulus for counters; forces them to stay within 0->63 as struct array only has 64 places
 			OI_Count &= 0b00111111;//modulus of 64
     1356:	99 27       	eor	r25, r25
-    1358:	90 93 4a 06 	sts	0x064A, r25	; 0x80064a <OI_Count+0x1>
-    135c:	80 93 49 06 	sts	0x0649, r24	; 0x800649 <OI_Count>
+    1358:	90 93 42 06 	sts	0x0642, r25	; 0x800642 <OI_Count+0x1>
+    135c:	80 93 41 06 	sts	0x0641, r24	; 0x800641 <OI_Count>
     1360:	80 91 31 06 	lds	r24, 0x0631	; 0x800631 <RL_Count>
     1364:	90 91 32 06 	lds	r25, 0x0632	; 0x800632 <RL_Count+0x1>
     1368:	8f 73       	andi	r24, 0x3F	; 63
@@ -3181,7 +3181,7 @@ int main(int argc, char *argv[]){
     1392:	99 27       	eor	r25, r25
     1394:	90 93 35 06 	sts	0x0635, r25	; 0x800635 <EX_Count+0x1>
     1398:	80 93 34 06 	sts	0x0634, r24	; 0x800634 <EX_Count>
-    139c:	80 91 48 06 	lds	r24, 0x0648	; 0x800648 <rampFlag>
+    139c:	80 91 40 06 	lds	r24, 0x0640	; 0x800640 <rampFlag>
     13a0:	88 23       	and	r24, r24
     13a2:	81 f0       	breq	.+32     	; 0x13c4 <main+0x35c>
     13a4:	51 10       	cpse	r5, r1
@@ -3190,10 +3190,10 @@ int main(int argc, char *argv[]){
     13a6:	0e c0       	rjmp	.+28     	; 0x13c4 <main+0x35c>
     13a8:	d3 01       	movw	r26, r6
     13aa:	8c 91       	ld	r24, X
-    13ac:	84 60       	ori	r24, 0x04	; 4
+    13ac:	85 60       	ori	r24, 0x05	; 5
     13ae:	8c 93       	st	X, r24
     13b0:	f4 01       	movw	r30, r8
-				TCCR3B |= _BV(CS32); //clock pre-scalar (clk/256) ~2 second 
+				TCCR3B |= _BV(CS32)| _BV(CS30); //clock pre-scalar (clk/1024) ~8 second 
     13b2:	11 82       	std	Z+1, r1	; 0x01
     13b4:	10 82       	st	Z, r1
     13b6:	88 b1       	in	r24, 0x08	; 8
@@ -3249,7 +3249,7 @@ int main(int argc, char *argv[]){
 					TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1
     1402:	88 b9       	out	0x08, r24	; 8
 					menuState=1;//if there is no objects on the conveyor; break loop and go to menuState==1	
-    1404:	10 92 48 06 	sts	0x0648, r1	; 0x800648 <rampFlag>
+    1404:	10 92 40 06 	sts	0x0640, r1	; 0x800640 <rampFlag>
 					PORTC |= 0b00001111;
     1408:	51 2c       	mov	r5, r1
     140a:	80 91 ae 05 	lds	r24, 0x05AE	; 0x8005ae <menuState>
@@ -3596,8 +3596,8 @@ int main(int argc, char *argv[]){
     1646:	60 c0       	rjmp	.+192    	; 0x1708 <main+0x6a0>
 				if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
     1648:	10 92 33 06 	sts	0x0633, r1	; 0x800633 <ADCResultFlag>
-    164c:	80 91 46 06 	lds	r24, 0x0646	; 0x800646 <lowADC>
-    1650:	90 91 47 06 	lds	r25, 0x0647	; 0x800647 <lowADC+0x1>
+    164c:	80 91 3e 06 	lds	r24, 0x063E	; 0x80063e <lowADC>
+    1650:	90 91 3f 06 	lds	r25, 0x063F	; 0x80063f <lowADC+0x1>
 					ADCResultFlag=0; //reset flag
     1654:	90 93 37 06 	sts	0x0637, r25	; 0x800637 <ADCAverage+0x1>
 					ADCAverage=lowADC;
@@ -3834,8 +3834,8 @@ ISR(INT2_vect){ // on PD2; active high; triggered on rising-edge
 	lowADC=0xFFFF;
     17b0:	8f ef       	ldi	r24, 0xFF	; 255
     17b2:	9f ef       	ldi	r25, 0xFF	; 255
-    17b4:	90 93 47 06 	sts	0x0647, r25	; 0x800647 <lowADC+0x1>
-    17b8:	80 93 46 06 	sts	0x0646, r24	; 0x800646 <lowADC>
+    17b4:	90 93 3f 06 	sts	0x063F, r25	; 0x80063f <lowADC+0x1>
+    17b8:	80 93 3e 06 	sts	0x063E, r24	; 0x80063e <lowADC>
 	ADCSRA|= _BV(ADSC); //trigger ADC (i.e. begin ADC conversion)
     17bc:	ea e7       	ldi	r30, 0x7A	; 122
     17be:	f0 e0       	ldi	r31, 0x00	; 0
@@ -3866,7 +3866,7 @@ ISR(INT3_vect){ //on PD3; active low; triggered on falling-edge
     17e6:	8f 93       	push	r24
 	optExitFlag=0x01;
     17e8:	81 e0       	ldi	r24, 0x01	; 1
-    17ea:	80 93 4b 06 	sts	0x064B, r24	; 0x80064b <optExitFlag>
+    17ea:	80 93 43 06 	sts	0x0643, r24	; 0x800643 <optExitFlag>
 }
     17ee:	8f 91       	pop	r24
     17f0:	0f 90       	pop	r0
@@ -3895,15 +3895,15 @@ ISR(ADC_vect){
 	if (lowADC>ADC)lowADC=ADC;  //if ADC result is still decreasing (i.e. if object's reflectivity is increasing)
     1814:	20 91 78 00 	lds	r18, 0x0078	; 0x800078 <__TEXT_REGION_LENGTH__+0x7e0078>
     1818:	30 91 79 00 	lds	r19, 0x0079	; 0x800079 <__TEXT_REGION_LENGTH__+0x7e0079>
-    181c:	80 91 46 06 	lds	r24, 0x0646	; 0x800646 <lowADC>
-    1820:	90 91 47 06 	lds	r25, 0x0647	; 0x800647 <lowADC+0x1>
+    181c:	80 91 3e 06 	lds	r24, 0x063E	; 0x80063e <lowADC>
+    1820:	90 91 3f 06 	lds	r25, 0x063F	; 0x80063f <lowADC+0x1>
     1824:	28 17       	cp	r18, r24
     1826:	39 07       	cpc	r19, r25
     1828:	40 f4       	brcc	.+16     	; 0x183a <__vector_29+0x40>
     182a:	80 91 78 00 	lds	r24, 0x0078	; 0x800078 <__TEXT_REGION_LENGTH__+0x7e0078>
     182e:	90 91 79 00 	lds	r25, 0x0079	; 0x800079 <__TEXT_REGION_LENGTH__+0x7e0079>
-    1832:	90 93 47 06 	sts	0x0647, r25	; 0x800647 <lowADC+0x1>
-    1836:	80 93 46 06 	sts	0x0646, r24	; 0x800646 <lowADC>
+    1832:	90 93 3f 06 	sts	0x063F, r25	; 0x80063f <lowADC+0x1>
+    1836:	80 93 3e 06 	sts	0x063E, r24	; 0x80063e <lowADC>
 	if (PIND&0b00000100) ADCSRA|= _BV(ADSC); //if there is still an object in OR optical beam keep initializing ADC conversions
     183a:	4a 9b       	sbis	0x09, 2	; 9
     183c:	06 c0       	rjmp	.+12     	; 0x184a <__vector_29+0x50>
@@ -4037,20 +4037,20 @@ ISR(TIMER1_OVF_vect){
     1910:	83 b1       	in	r24, 0x03	; 3
     1912:	80 93 08 01 	sts	0x0108, r24	; 0x800108 <portbhistory>
 	doublePressCount++;
-    1916:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    1916:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     191a:	8f 5f       	subi	r24, 0xFF	; 255
-    191c:	80 93 45 06 	sts	0x0645, r24	; 0x800645 <doublePressCount>
+    191c:	80 93 3d 06 	sts	0x063D, r24	; 0x80063d <doublePressCount>
 	doublePressCount&=0b00000001; //modulus of 2
-    1920:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    1920:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     1924:	81 70       	andi	r24, 0x01	; 1
-    1926:	80 93 45 06 	sts	0x0645, r24	; 0x800645 <doublePressCount>
+    1926:	80 93 3d 06 	sts	0x063D, r24	; 0x80063d <doublePressCount>
 	// Joystick UP - PORTB7
 	if(changedbits & (1 << PB7)){
     192a:	80 91 30 06 	lds	r24, 0x0630	; 0x800630 <changedbits>
     192e:	88 23       	and	r24, r24
     1930:	3c f4       	brge	.+14     	; 0x1940 <__vector_20+0x5c>
 		if(doublePressCount) up_key_press=1;	
-    1932:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    1932:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     1936:	88 23       	and	r24, r24
     1938:	19 f0       	breq	.+6      	; 0x1940 <__vector_20+0x5c>
     193a:	81 e0       	ldi	r24, 0x01	; 1
@@ -4062,7 +4062,7 @@ ISR(TIMER1_OVF_vect){
     1944:	86 ff       	sbrs	r24, 6
     1946:	07 c0       	rjmp	.+14     	; 0x1956 <__vector_20+0x72>
 		if(doublePressCount) left_key_press=1;		 
-    1948:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    1948:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     194c:	88 23       	and	r24, r24
     194e:	19 f0       	breq	.+6      	; 0x1956 <__vector_20+0x72>
     1950:	81 e0       	ldi	r24, 0x01	; 1
@@ -4074,7 +4074,7 @@ ISR(TIMER1_OVF_vect){
     195a:	85 ff       	sbrs	r24, 5
     195c:	0b c0       	rjmp	.+22     	; 0x1974 <__vector_20+0x90>
 		if(doublePressCount && menuState==3) menuState = 4;
-    195e:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    195e:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     1962:	88 23       	and	r24, r24
     1964:	39 f0       	breq	.+14     	; 0x1974 <__vector_20+0x90>
     1966:	80 91 ae 05 	lds	r24, 0x05AE	; 0x8005ae <menuState>
@@ -4089,7 +4089,7 @@ ISR(TIMER1_OVF_vect){
     1978:	83 ff       	sbrs	r24, 3
     197a:	07 c0       	rjmp	.+14     	; 0x198a <__vector_20+0xa6>
 		if(doublePressCount) menuState = 3;
-    197c:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    197c:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     1980:	88 23       	and	r24, r24
     1982:	19 f0       	breq	.+6      	; 0x198a <__vector_20+0xa6>
     1984:	83 e0       	ldi	r24, 0x03	; 3
@@ -4102,14 +4102,14 @@ ISR(TIMER1_OVF_vect){
     1990:	09 c0       	rjmp	.+18     	; 0x19a4 <__vector_20+0xc0>
 	{
 		if(doublePressCount){
-    1992:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    1992:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     1996:	88 23       	and	r24, r24
     1998:	29 f0       	breq	.+10     	; 0x19a4 <__vector_20+0xc0>
 			rampDownSet = 1;
     199a:	81 e0       	ldi	r24, 0x01	; 1
     199c:	80 93 ad 05 	sts	0x05AD, r24	; 0x8005ad <rampDownSet>
 			rampFlag = 1;
-    19a0:	80 93 48 06 	sts	0x0648, r24	; 0x800648 <rampFlag>
+    19a0:	80 93 40 06 	sts	0x0640, r24	; 0x800640 <rampFlag>
 		}
 	}
 	// Pause/Resume Button - PORTB1
@@ -4119,7 +4119,7 @@ ISR(TIMER1_OVF_vect){
     19aa:	11 c0       	rjmp	.+34     	; 0x19ce <__vector_20+0xea>
 	{
 		if(doublePressCount){
-    19ac:	80 91 45 06 	lds	r24, 0x0645	; 0x800645 <doublePressCount>
+    19ac:	80 91 3d 06 	lds	r24, 0x063D	; 0x80063d <doublePressCount>
     19b0:	88 23       	and	r24, r24
     19b2:	69 f0       	breq	.+26     	; 0x19ce <__vector_20+0xea>
 			if(programPause == 0) menuState = 1;

@@ -35,7 +35,7 @@ void motorControl(int s, uint8_t d);//accepts speed and direction:speed range (0
 /*Global Variables*/
 volatile unsigned int lowADC; //10 bit value; stores minimum result of ADC conversion for current object
 volatile unsigned int ADCFilterCount; //count that iterates through lowADCArray for averaging later
-volatile unsigned int lowADCArray[4]; //stores minimum value of ADC plus 3 preceding minimimum values
+//volatile unsigned int lowADCArray[4]; //stores minimum value of ADC plus 3 preceding minimimum values
 volatile unsigned int typeArray[64]; //stores type of object for sorting when exit sensor is triggered
 volatile unsigned int ADCAverage; //used for averaging of ADC values (sums and then divides)
 volatile unsigned int OI_Count; //count of objects that have hit optical sensor 1 (OI)
@@ -180,7 +180,7 @@ int main(int argc, char *argv[]){
 			EX_Count &= 0b00111111;
 			// Ramp Down; process every object on conveyor, stop conveyor, display sorted objects
 			if((rampFlag>0)&&(rampSet==0)){
-				TCCR3B |= _BV(CS32); //clock pre-scalar (clk/256) ~2 second 
+				TCCR3B |= _BV(CS32)| _BV(CS30); //clock pre-scalar (clk/1024) ~8 second 
 				TCNT3=0x00; //set timer equal to zero
 				PORTC |=0b11110000;
 				if ((TIFR3 & 0x01) == 0x01)TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
