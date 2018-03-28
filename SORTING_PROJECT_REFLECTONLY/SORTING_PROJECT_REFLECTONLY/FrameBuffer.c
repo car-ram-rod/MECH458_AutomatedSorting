@@ -182,6 +182,14 @@ void drawNumber(int16_t x, int16_t y, int number){
 	sprintf(str,"%i",number);
 	drawString(x,y,str);
 }
+
+void drawInitializing(void){
+	clear();
+	drawString(0,24, "Initialize");
+	show();
+	
+}
+
 // Draws Running Screen
 void drawRunning(void){
 	clear();
@@ -191,10 +199,10 @@ void drawRunning(void){
 }
 
 // Draws Paused Screen
-void drawPause(uint8_t objects){
+void drawPause(uint8_t RLEX_Count, uint8_t BL_Count, uint8_t WH_Count, uint8_t AL_Count, uint8_t ST_Count){
 	clear();
 	uint8_t pos_x = 15; 
-	uint8_t pos_y = 8; 
+	uint8_t pos_y = 0; 
 
 	// Pause String
 	drawVLine(pos_x-3, pos_y -2, 18);
@@ -209,10 +217,16 @@ void drawPause(uint8_t objects){
 	drawVLine(pos_x+102, pos_y-2, 18);
 	
 	// Object Count String
-	drawString(0,pos_y + 20,"Objects");
-	drawString(90,pos_y + 20,"bwt");
-	drawString(0,pos_y + 36,"sensors:");
-	drawNumber(100,pos_y + 36, objects);
+	drawString(0,16,"BL:");
+	drawNumber(37,16, BL_Count);
+	drawString(64,16,"WH:");
+	drawNumber(101,16, WH_Count);
+	drawString(0,32,"AL:");
+	drawNumber(37,32, AL_Count);
+	drawString(64,32,"ST:");
+	drawNumber(101,32, ST_Count);
+	drawString(0,48,"REM:");
+	drawNumber(47,48, RLEX_Count);
 
 	show();	
 }
@@ -286,7 +300,11 @@ void drawSelectBar(uint8_t barState){
 			drawHLine(96,40,23);
 			drawHLine(96,42,23);	
 			break;
-		
+		case selAll:	
+			drawHLine(12,60,110);
+			drawHLine(12,60,110);
+			drawHLine(12,60,110);
+			break;
 	}// end switch
 }
 

@@ -12,6 +12,7 @@
 #define selWhite 2
 #define selAlum  3
 #define selSteel 4
+#define selAll	 5
 
 
 
@@ -35,6 +36,13 @@ void drawNumber(int16_t x, int16_t y, int number);
   Input:    None
   
 *************************************************************************/
+void drawInitializing(void);
+/*************************************************************************
+  Send Running string to oled
+  
+  Input:    None
+  
+*************************************************************************/
 void drawRunning(void);
 
 /*************************************************************************
@@ -43,7 +51,7 @@ void drawRunning(void);
   Input:    objects - Number of objects between optical sensors
   
 *************************************************************************/
-void drawPause(uint8_t objects);
+void drawPause(uint8_t RLEX_Count, uint8_t BL_Count, uint8_t WH_Count, uint8_t AL_Count, uint8_t ST_Count);
 
 
 /*************************************************************************
