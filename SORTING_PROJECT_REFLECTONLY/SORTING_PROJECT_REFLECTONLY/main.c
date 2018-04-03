@@ -2,11 +2,11 @@
 ########################################################################
 # MILESTONE : Final Project
 # PROGRAM : 6: Automated Sorting
-# PROJECT : Lab5:
+# PROJECT : MECH458 Final Project
 # GROUP : X
 # NAME 1 : Owen, Anderberg, V00862140
 # NAME 2 : Ben, Duong, V00839087
-# DESC : Automated sorting of cylindrical objects using sensors, DC and Stepper motors
+# DESC : Automated sorting of cylindrical objects using sensors, and DC, Stepper motors
 # DATA
 # REVISED 2018-FEB-9
 ########################################################################
@@ -53,7 +53,7 @@ volatile uint8_t programPause = 0;
 volatile uint8_t menuState = 0;
 volatile uint8_t barState = 1;
 volatile uint8_t rampDownSet = 0; //Might not need
-volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
+volatile uint8_t portbhistory = 0xFF;     // default is high because of pull-up resistor
 volatile uint8_t changedbits;
 // Key Press State Variables
 volatile uint8_t right_key_press = 0;
@@ -61,7 +61,7 @@ volatile uint8_t left_key_press = 0;
 volatile uint8_t down_key_press = 0;
 volatile uint8_t up_key_press = 0;
 // Calibration Settings
-volatile uint16_t blkCali = 995; //minimum reflectivity of black plastic (lowest number measured around 970)
+volatile uint16_t blkCali = 995; //minimum reflectivity of black plastic (lowest number measured around 970); Note: unused variable
 volatile uint16_t whtCali = 960; //minimum reflectivity of white plastic (highest number around 945-955)
 volatile uint16_t almCali = 300; //minimum reflectivity of aluminum (largest number measured is around 100)
 volatile uint16_t stlCali = 800; //minimum reflectivity of steel (largest number measured around 500)
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]){
 	DDRA = 0x3F; /* Sets pins 5:0 on Port A to output: stepper motor control */
 		/*stepper motor connections to MCU: PA5:0 = EN0, L1, L2, EN1, L3, L4*/
 		/*Hall effect sensor on PA7*/
-	DDRB = 0x10; /*controls dc motor: PB4=PWM signal*/
+	DDRB = 0x10; /*PB4=PWM signal for DC motor*/
 	DDRC = 0xFF; //LEDs Debugging
 	DDRD = 0xF3; //upper nibble for on-board bi-color LEDs, interrupts on lower nibble	PORTD3:0=INT3:0
 	DDRE = 0x0F; /*interrupts on upper nibble;PE3:0={INA,INB,ENA,ENB}*/
@@ -138,14 +138,14 @@ int main(int argc, char *argv[]){
 		while(menuState==0){
 			if(ADCResultFlag){ //If the minimum reflectivity has been reached for an object
 				ADCResultFlag=0; //reset flag
-				ADCAverage=lowADC;
-				PORTC=ADCAverage&0x00FF;
-				PORTD&=0x0F;
-				PORTD|=((ADCAverage&0x0300)>>3);
+				//ADCAverage=lowADC;
+				//PORTC=ADCAverage&0x00FF;
+				//PORTD&=0x0F;
+				//PORTD|=((ADCAverage&0x0300)>>3);
 				//sorting objects by reflectivity
-				if (ADCAverage<almCali)typeArray[RL_Count]=150;//object is aluminum
-				else if(ADCAverage<stlCali)typeArray[RL_Count]=50;//object is steel
-				else if(ADCAverage<whtCali) typeArray[RL_Count]=100; //object is white
+				if (lowADC<almCali)typeArray[RL_Count]=150;//object is aluminum
+				else if(lowADC<stlCali)typeArray[RL_Count]=50;//object is steel
+				else if(lowADC<whtCali) typeArray[RL_Count]=100; //object is white
 				else typeArray[RL_Count]=0;//object is black
 				RL_Count++;//add one to amount of objects that have had their reflectivity's measured
 				RLEX_Count+=1;
@@ -179,10 +179,11 @@ int main(int argc, char *argv[]){
 			OR_Count &= 0b00111111;
 			EX_Count &= 0b00111111;
 			// Ramp Down; process every object on conveyor, stop conveyor, display sorted objects
-			if((rampFlag>0)&&(rampSet==0)){
+			//if((rampFlag>0)&&(rampSet==0)){
+			if((rampFlag)&&(!rampSet)){
 				TCCR3B |= _BV(CS32)| _BV(CS30); //clock pre-scalar (clk/1024) ~8 second 
 				TCNT3=0x00; //set timer equal to zero
-				PORTC |=0b11110000;
+				//PORTC |=0b11110000;
 				if ((TIFR3 & 0x01) == 0x01)TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1 (confused?)
 				rampSet=1;
 			}
@@ -196,7 +197,7 @@ int main(int argc, char *argv[]){
 					TCNT3=0x00;
 					TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1
 					menuState=1;//if there is no objects on the conveyor; break loop and go to menuState==1	
-					PORTC |= 0b00001111;
+					//PORTC |= 0b00001111;
 					rampSet=0;
 					rampFlag=0;
 				} 
@@ -204,21 +205,15 @@ int main(int argc, char *argv[]){
 		}//end of sort code
 		if(menuState==1){//pause function
 			PORTE &=0xF0; //Apply Vcc brake to motor
-			drawPause(RLEX_Count,BL_Count,WH_Count,AL_Count,ST_Count);
-			//unsorted objects: RLEX_Count
-			//sorted objects: BL_Count, ST_Count, WH_Count AL_Count
+			drawPause(RLEX_Count,BL_Count,WH_Count,AL_Count,ST_Count);//unsorted objects: RLEX_Count;sorted objects: BL_Count, ST_Count, WH_Count AL_Count
 			programPause = 1;
-		} // End menuState 1
-				
+		} // End menuState 1				
 		// Ramp Down; process every object on conveyor, stop conveyor, display sorted objects
 		if(menuState==2){
 			clear(); //to clear display buffer
 			drawString(12,16, "Ramp Down");
 			show();
 			menuState=1;
-			//When finished Ramp Down
-			//mTimer(10); // Remove, placeholder to simulated that sorting has finished
-
 		} // End menuState 2
 		// Calibrate Menu
 		if(menuState==3){
