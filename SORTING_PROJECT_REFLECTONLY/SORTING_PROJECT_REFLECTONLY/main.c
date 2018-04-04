@@ -65,6 +65,7 @@ volatile uint16_t blkCali = 995; //minimum reflectivity of black plastic (lowest
 volatile uint16_t whtCali = 960; //minimum reflectivity of white plastic (highest number around 945-955)
 volatile uint16_t almCali = 300; //minimum reflectivity of aluminum (largest number measured is around 100)
 volatile uint16_t stlCali = 800; //minimum reflectivity of steel (largest number measured around 500)
+volatile uint16_t dutyCali = 35; //PWM Duty Cycle for DC motor
 /* Main Routine */
 int main(int argc, char *argv[]){
 	CLKPR = _BV(CLKPCE);/*initialize clock to 8MHz*/
@@ -127,7 +128,7 @@ int main(int argc, char *argv[]){
 	PORTC=0b00001111;
 	mTimer0(2000);
 	stepperHome(&stepperPosition,&stepperIteration); //home stepper
-	motorControl(CONVEYOR_SPEED,DC_FORWARD);//conveyor forward (counter-clock-wise)
+	motorControl(dutyCali,DC_FORWARD);//conveyor forward (counter-clock-wise)
 	while(1){
 		if(menuState==0){
 			drawRunning();
@@ -148,7 +149,7 @@ int main(int argc, char *argv[]){
 				else if(lowADC<whtCali) typeArray[RL_Count]=100; //object is white
 				else typeArray[RL_Count]=0;//object is black
 				RL_Count++;//add one to amount of objects that have had their reflectivity's measured
-				RLEX_Count+=1;
+				RLEX_Count++;
 			}
 			if(optExitFlag){ //object has hit sensor at end of conveyor
 				//corresponding positions (black=0;aluminum=50;white=100;steel=150)
@@ -169,7 +170,7 @@ int main(int argc, char *argv[]){
 				else if (tempType==50)ST_Count += 0x01;
 				else if (tempType==100)WH_Count += 0x01;
 				else if (tempType==150)AL_Count += 0x01;
-				RLEX_Count-=1;
+				RLEX_Count--;
 				EX_Count++;
 				optExitFlag=0; //reset flag
 			}
@@ -243,14 +244,20 @@ int main(int argc, char *argv[]){
 			{
 				// Draw Black
 				case selBlack:
+				PORTE&=0b11110000; //stop DC motor
 				if(up_key_press==1){
 					up_key_press=0;
-					blkCali++;
+					//blkCali++;
+					dutyCali++;
 					}else if(down_key_press==1){
 					down_key_press=0;
-					blkCali--;
+					//blkCali--;
+					dutyCali--;
 				}
-				drawBlackCali(blkCali);
+				dutyCali%=100; //keep within bounds
+				OCR2A = dutyCali*2.55;//set duty cycle/start motor
+				//drawBlackCali(blkCali);
+				drawPWMCali(dutyCali);
 				break;
 				// Draw White
 				case selWhite:

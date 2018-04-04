@@ -87,7 +87,13 @@ void drawCalibrateADC(void);
 *************************************************************************/
 void drawSelectBar(uint8_t barState);
 
+/*************************************************************************
+  Draws the PWM Duty Cycle calibration screen
+  
+  Input:	dutyCali - The duty cycle calibration value to be drawn
 
+*************************************************************************/
+void drawPWMCali(uint16_t dutyCali);
 /*************************************************************************
   Draws the Black Object calibration screen
   

@@ -256,7 +256,7 @@ void drawCalibrateADC(void){
 	drawString(12,0, "Calibrate");
 	
 	drawVLine(9, 20, 32);
-	drawString(12,20,"BL");
+	drawString(12,20,"DC");
 	drawVLine(37, 20, 32);
 	drawString(40,20,"WH");
 	drawVLine(65, 20, 32);
@@ -317,6 +317,14 @@ void drawBlackCali(uint16_t blkCali){
 	
 }
 
+void drawPWMCali(uint16_t dutyCali){
+	
+	clear();
+	drawString(5,32, "Duty%:");
+	drawNumber(80,32, dutyCali);
+	show();
+	
+}
 
 void drawWhiteCali(uint16_t whtCali){
 		clear();
