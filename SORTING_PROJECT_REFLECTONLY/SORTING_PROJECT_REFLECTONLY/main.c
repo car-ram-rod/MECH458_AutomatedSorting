@@ -255,7 +255,7 @@ int main(int argc, char *argv[]){
 					dutyCali--;
 				}
 				dutyCali%=100; //keep within bounds
-				OCR2A = dutyCali*2.55;//set duty cycle/start motor
+				OCR2A = dutyCali*2.55;//set PWM duty cycle
 				//drawBlackCali(blkCali);
 				drawPWMCali(dutyCali);
 				break;
