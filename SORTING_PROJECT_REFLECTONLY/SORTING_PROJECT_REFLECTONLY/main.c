@@ -62,7 +62,7 @@ volatile uint8_t down_key_press = 0;
 volatile uint8_t up_key_press = 0;
 // Calibration Settings
 volatile uint16_t blkCali = 995; //minimum reflectivity of black plastic (lowest number measured around 970); Note: unused variable
-volatile uint16_t whtCali = 960; //minimum reflectivity of white plastic (highest number around 945-955)
+volatile uint16_t whtCali = 980; //minimum reflectivity of white plastic (highest number around 945-955)
 volatile uint16_t almCali = 300; //minimum reflectivity of aluminum (largest number measured is around 100)
 volatile uint16_t stlCali = 800; //minimum reflectivity of steel (largest number measured around 500)
 volatile uint16_t dutyCali = 35; //PWM Duty Cycle for DC motor
@@ -199,7 +199,7 @@ int main(int argc, char *argv[]){
 					TIFR3|=0x01; //if TOV3 flag is set to 1, reset to 0 by setting bit to 1
 					menuState=1;//if there is no objects on the conveyor; break loop and go to menuState==1	
 					//PORTC |= 0b00001111;
-					rampSet=0;
+					//rampSet=0;
 					rampFlag=0;
 				} 
 			}
@@ -208,6 +208,12 @@ int main(int argc, char *argv[]){
 			PORTE &=0xF0; //Apply Vcc brake to motor
 			drawPause(RLEX_Count,BL_Count,WH_Count,AL_Count,ST_Count);//unsorted objects: RLEX_Count;sorted objects: BL_Count, ST_Count, WH_Count AL_Count
 			programPause = 1;
+			if (rampSet==1){
+				cli();
+				PORTE&=0b11110000; //shut off motor
+				while(1){};
+			}
+			
 		} // End menuState 1				
 		// Ramp Down; process every object on conveyor, stop conveyor, display sorted objects
 		if(menuState==2){
