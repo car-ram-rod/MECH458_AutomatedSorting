@@ -1,14 +1,14 @@
 /* Solution Set for the LinkedQueue.c */
-/* 	
+/*
 	Course		: UVic Mechatronics 458
 	Milestone	: 3
 	Title		: Data structures for MCUs and the Linked Queue Library
 
 	Name 1:					Student ID:
 	Name 2:					Student ID:
-	
+
 	Description: You can change the following after you read it.
-	
+
 	This main routine will only serve as a testing routine for now. At some point you can comment out
 	The main routine, and can use the following library of functions in your other applications
 
@@ -33,7 +33,7 @@ void setup(link **h,link **t){
 }/*setup*/
 
 /**************************************************************************************
-* DESC: This initializes a link and returns the pointer to the new link or NULL if error 
+* DESC: This initializes a link and returns the pointer to the new link or NULL if error
 * INPUT: the head and tail pointers by reference
 */
 void initLink(link **newLink){
@@ -44,9 +44,9 @@ void initLink(link **newLink){
 }/*initLink*/
 
 /****************************************************************************************
-*  DESC: Accepts as input a new link by reference, and assigns the head and tail		
-*  of the queue accordingly				
-*  INPUT: the head and tail pointers, and a pointer to the new link that was created 
+*  DESC: Accepts as input a new link by reference, and assigns the head and tail
+*  of the queue accordingly
+*  INPUT: the head and tail pointers, and a pointer to the new link that was created
 */
 /* will put an item at the tail of the queue */
 void enqueue(link **h, link **t, link **nL){
@@ -68,7 +68,7 @@ void enqueue(link **h, link **t, link **nL){
 
 /**************************************************************************************
 * DESC : Removes the link from the head of the list and assigns it to deQueuedLink
-* INPUT: The head and tail pointers, and a ptr 'deQueuedLink' 
+* INPUT: The head and tail pointers, and a ptr 'deQueuedLink'
 * 		 which the removed link will be assigned to
 */
 /* This will remove the link and element within the link from the head of the queue */
@@ -108,9 +108,9 @@ void clearQueue(link **h, link **t){
 		*h=(*h)->next;
 		free(temp);
 	}/*while*/
-	
+
 	/* Last but not least set the tail to NULL */
-	*t = NULL;		
+	*t = NULL;
 
 	return;
 }/*clearQueue*/
@@ -145,6 +145,6 @@ int size(link **h, link **t){
 		numElements++;
 		temp = temp->next;
 	}/*while*/
-	
+
 	return(numElements);
 }/*size*/
